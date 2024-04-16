@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Player Stats</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="main">
+
+        <div id="header">
+
+        </div>
+
+        <div id="ddLists">      
+            <div class="dropdown-row">
+                <label for="seasons">Select a season:</label>
+                <div class="select-wrapper">
+                    <select id="seasons">
+                        <!-- Options will be populated dynamically using JavaScript -->
+                    </select>
+                </div>
+            </div>
+        
+            <div class="dropdown-row">
+                <label for="race">Select a race:</label>
+                <div class="select-wrapper">
+                    <select id="race">
+                        <!-- Options will be populated dynamically using JavaScript -->
+                    </select>
+                </div>
+            </div>
+
+            <div class="dropdown-row">
+                <label for="nameList">Select a name:</label>
+                <div class="select-wrapper">
+                    <select id="nameList">
+                        <!-- Options will be populated dynamically using JavaScript -->
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div id="buttons">
+            <button onclick="pullAndVisualize()">Pull Match Data</button>
+            <button id="exportBtn">Export to CSV</button>
+        </div>
+
+        <div id="table">
+            <div id="loadingSpinner" class="spinner">
+                <!-- Your loading spinner HTML/CSS code here -->
+            </div>
+
+            <table id="outputTable">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Season</th>
+                        <th>Race</th>
+                        <th>Game Count</th>
+                        <th>Average MMR</th>
+                        <th>Min MMR</th>
+                        <th>Max MMR</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Table rows will be populated dynamically using JavaScript -->
+                </tbody>
+            </table>
+        </div>
+
+        <div id="canvas">
+            <!-- Canvas element to render the line graph -->
+            <canvas id="lineGraph"></canvas>
+            <canvas id="lineGraph2"></canvas>
+            <canvas id="lineGraph3"></canvas>
+        </div>
+        
+    </div>
+
+<!-- Include Papaparse.js library -->
+    <script src="PapaParse-5.0.2\papaparse.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="populateDropdown.js"></script>
+    <script src="pullAndVisualize.js"></script>
+    <script src="export.js"></script>
+
+    <script>
+        // Run on load
+        window.onload = function() {
+            populateName(); 
+        };
+    </script>
+    
+</body>
+</html>

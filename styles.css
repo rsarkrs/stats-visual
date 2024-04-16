@@ -1,0 +1,130 @@
+body {
+    margin: 0;
+    padding: 50px 50px;
+    background-color: #f2f2f2; /* Change this to the desired background color */
+    display: flex;
+
+}
+
+select {
+    padding: 10px;
+    font-size: 16px;
+    margin-bottom: 10px;
+}
+
+button {
+    padding: 10px 20px;
+    font-size: 16px;
+    background-color: #007bff; /* Change this to the desired button color */
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+button:hover {
+    background-color: #0056b3; /* Change this to the desired button hover color */
+}
+
+table {
+    border-collapse: collapse;
+    width: 100%;
+    margin-top: 20px;
+}
+
+th, td {
+    border: 1px solid #ddd;
+    padding: 4px;
+    text-align: left;
+}
+
+th {
+    background-color: #f2f2f2;
+}
+
+#main {
+    background-color: #f2f2f2;
+}
+
+#header {
+    background-color: #f2f2f2;
+}
+
+#buttons {
+    float: center;
+}
+
+#table {
+    float: left;
+    width: 40%;
+}
+
+#canvas {
+    float: center;
+    width: 60%;
+    display: flex;
+    flex-direction: column; /* Stack items vertically */
+}
+
+#canvas canvas {
+    margin-left: 5px;
+    margin-bottom: 10px;
+}
+
+#ddLists {
+    display: grid;
+    grid-gap: 10px; /* Add some gap between rows */
+    
+}
+.dropdown-row {
+    display: flex;
+    align-items: center;
+    
+}
+
+.dropdown-row label {
+    text-align: left;
+    min-width: 125px; /* Ensure consistent width for labels */
+}
+
+.select-wrapper {
+    width: 100%; /* Make selects fill the available width */
+}
+
+#outputTable {
+    display: none;
+}
+
+#loadingSpinner {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 100px; /* Adjust size as needed */
+    height: 100px; /* Adjust size as needed */
+    background-color: rgba(255, 255, 255, 0.5); /* Semi-transparent background */
+    border-radius: 50%;
+    display: none; /* Initially hidden */
+    justify-content: center;
+    align-items: center;
+    z-index: 9999; /* Ensure the spinner is on top of other content */
+}
+
+.spinner {
+    border: 4px solid rgba(0, 0, 0, 0.1);
+    border-left-color: #333;
+    border-radius: 50%;
+    width: 50px; /* Adjust size as needed */
+    height: 50px; /* Adjust size as needed */
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}
