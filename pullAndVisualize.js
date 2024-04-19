@@ -1,13 +1,14 @@
 async function pullAndVisualize() {
     //Function to pull games and calculate player stats
     async function stats() {
-        // Show loading spinner before executing the main logic
-        document.getElementById('loadingSpinner').style.display = 'block';
-
         var tag = document.getElementById('nameList').value;
         var battleTag = tag.replace("#", "%23")
         var raceid;
-        if (document.getElementById('seasons').value == 'All') {
+        var table = document.getElementById('outputTable');
+        var season_check = document.getElementById('seasons').value
+        var race_check = document.getElementById('race').value
+
+        if (season_check == 'All') {
             var season_variable = [
                 '1',
                 '2',
@@ -29,24 +30,41 @@ async function pullAndVisualize() {
                 '18'
             ];
         } else {
-            var season_variable = [document.getElementById('seasons').value];
+            var season_variable = [season_check];
         }
-        if (document.getElementById('race').value == 'All') {
+
+        if (race_check == 'All') {
             var race = ['Random', 'Human', 'Night Elf', 'Orc', 'Undead'];
-        } else if (document.getElementById('race').value == 'Random') {
-            var race = ['Random'];
-        } else if (document.getElementById('race').value == 'Human') {
-            var race = ['Human'];
-        } else if (document.getElementById('race').value == 'Night Elf') {
-            var race = ['Night Elf'];
-        } else if (document.getElementById('race').value == 'Orc') {
-            var race = ['Orc'];
-        } else if (document.getElementById('race').value == 'Undead') {
-            var race = ['Undead'];
-        } 
+        } else {
+            var race = [race_check];
+        }
 
+        function dupTableCheck(tableTemp, tagTemp, seasonTemp, raceTemp) {   
+            // Extract data from the table
+            for (var i = tableTemp.rows.length - 1; i > 0; i--) {
+                console.log(i);
+                console.log(tableTemp.rows.length);
+                var row = tableTemp.rows[i];
+                var name = row.cells[0].textContent;
+                var season = row.cells[1].textContent; 
+                var race = row.cells[2].textContent;
+                console.log(season);
+                console.log(race);
+                if (name != tagTemp || (seasonTemp.includes(season) && raceTemp.includes(race))) {
+                    tableTemp.deleteRow(i);
+                }
+            }
+            return;
+        }
 
-        
+        if (table.rows.length > 0) {
+            dupTableCheck(table, tag, season_variable, race);
+        }
+
+        // hide the table
+        document.getElementById('outputTable').style.display = 'none';
+        // Show loading spinner before executing the main logic
+        document.getElementById('loadingSpinner').style.display = 'block';
 
         //loop through all match pages
         for (let season_var of season_variable) {
@@ -61,18 +79,15 @@ async function pullAndVisualize() {
             var hu_mmr = [];
             var orc_mmr = [];
             var rd_mmr = [];
-
             while (offset != -1) {
             var url = 'https://website-backend.w3champions.com/api/matches/search?playerId=' + 
                 battleTag + '&gateway=20&offset=' + offset.toString() + '&pageSize=50&season=' + season_var.toString();
-
             try {
                 const response = await fetch(url);
                 if (!response.ok) {
                     throw new Error('Network response was not ok');
                 }
                 const rawdata = await response.json();
-
                 if (rawdata["matches"].length < 50) {
                     offset = -1
                 } else {
@@ -102,7 +117,6 @@ async function pullAndVisualize() {
                             (player_record[1].toLowerCase() == pname.toLowerCase() && race_record[1] == raceid)
                         ), mmr]
                 };
-
                 // Create game_records variable that holds each solo with assigned race
                 rawdata["matches"].forEach(function(record) {
                     race.forEach(function(race_record) {
@@ -154,7 +168,6 @@ async function pullAndVisualize() {
                     offset = -1; // Stop the loop on error
                 }
             }
-
             var rd_mmr_sum = 0;
             var rd_mmr_floor = 5000;
             var rd_mmr_roof = 0;
@@ -164,17 +177,14 @@ async function pullAndVisualize() {
             var ne_mmr_floor = 5000;
             var ne_mmr_roof = 0;
             var ne_mmr_avg = 0;
-
             var hu_mmr_sum = 0;
             var hu_mmr_floor = 5000;
             var hu_mmr_roof = 0;
             var hu_mmr_avg = 0;
-
             var orc_mmr_sum = 0;
             var orc_mmr_floor = 5000;
             var orc_mmr_roof = 0;
             var orc_mmr_avg = 0;
-
             var ud_mmr_sum = 0;
             var ud_mmr_floor = 5000;
             var ud_mmr_roof = 0;
@@ -186,37 +196,31 @@ async function pullAndVisualize() {
                 rd_mmr_floor = Math.min(metrics, rd_mmr_floor);
                 rd_mmr_roof = Math.max(metrics, rd_mmr_roof);
             })
-
             hu_mmr.forEach(function(metrics) {
                 hu_mmr_sum += metrics;
                 hu_mmr_floor = Math.min(metrics, hu_mmr_floor);
                 hu_mmr_roof = Math.max(metrics, hu_mmr_roof);
             })
-
             elf_mmr.forEach(function(metrics) {
                 ne_mmr_sum += metrics;
                 ne_mmr_floor = Math.min(metrics, ne_mmr_floor);
                 ne_mmr_roof = Math.max(metrics, ne_mmr_roof);
             })
-
             orc_mmr.forEach(function(metrics) {
                 orc_mmr_sum += metrics;
                 orc_mmr_floor = Math.min(metrics, orc_mmr_floor);
                 orc_mmr_roof = Math.max(metrics, orc_mmr_roof);
             })
-
             ud_mmr.forEach(function(metrics) {
                 ud_mmr_sum += metrics;
                 ud_mmr_floor = Math.min(metrics, ud_mmr_floor);
                 ud_mmr_roof = Math.max(metrics, ud_mmr_roof);
             })
-
             rd_mmr_avg = Math.round(rd_mmr_sum / rd_records.length);
             hu_mmr_avg = Math.round(hu_mmr_sum / hu_records.length);
             ne_mmr_avg = Math.round(ne_mmr_sum / elf_records.length);
             orc_mmr_avg = Math.round(orc_mmr_sum / orc_records.length);
             ud_mmr_avg = Math.round(ud_mmr_sum / ud_records.length);
-
             race.forEach(function(race_record) {
                 if (race_record == 'Random'){
                     arrTable = [tag, season_var, race_record, rd_records.length, rd_mmr_avg, rd_mmr_floor, rd_mmr_roof];
@@ -229,7 +233,6 @@ async function pullAndVisualize() {
                 } else if (race_record == 'Undead') {
                     arrTable = [tag, season_var, race_record, ud_records.length, ud_mmr_avg, ud_mmr_floor, ud_mmr_roof];
                 }
-
                     //populate table
                 if (arrTable[3] != 0) {
                     var outputTable = document.getElementById('outputTable').getElementsByTagName('tbody')[0];
@@ -249,9 +252,7 @@ async function pullAndVisualize() {
                     minCell.textContent = arrTable[5];
                     maxCell.textContent = arrTable[6];
                 }
-            })    
-
-            
+            })       
         }
         // display the table
         document.getElementById('outputTable').style.display = 'table';
@@ -462,7 +463,7 @@ async function pullAndVisualize() {
             }
     
             // Create line chart
-            window.lineChart = new Chart(ctx, {
+            window.lineChart2 = new Chart(ctx, {
                 type: 'line',
                 data: {
                     labels: labels,
@@ -500,8 +501,7 @@ async function pullAndVisualize() {
                 }
             });
         }
-    
-    
+
         function visualizeMax() {
             // Get the canvas element
             var canvas = document.getElementById('lineGraph3');
@@ -583,7 +583,7 @@ async function pullAndVisualize() {
             }
     
             // Create line chart
-            window.lineChart = new Chart(ctx, {
+            window.lineChart3 = new Chart(ctx, {
                 type: 'line',
                 data: {
                     labels: labels,
@@ -621,20 +621,50 @@ async function pullAndVisualize() {
                 }
             });
         }
-    
-    
-        // Destroy the existing line chart if it exists
-        if (window.lineChart) {
-            window.lineChart.destroy();
-        }
-    
+
         // Call the functions sequentially
         visualizeAvg();
         visualizeMin();
         visualizeMax();
-    
     }
 
+    // Destroy the existing line chart if it exists
+    if (window.lineChart) {
+        window.lineChart.destroy();
+        window.lineChart2.destroy();
+        window.lineChart3.destroy();
+    } 
+    
+    function sortTable() {
+        var table = document.getElementById('outputTable');
+        var switching = true;
+        /* Make a loop that will continue until no switching has been done: */
+        while (switching) {
+            // Start by saying: no switching is done:
+            switching = false;
+            var rows = table.rows;
+            /* Loop through all table rows (except the first, which contains table headers): */
+            for (i = 1; i < (rows.length - 1); i++) {
+                // Start by assuming there should be no switching:
+                shouldSwitch = false;
+                // extract row 1 season
+                var seasonX = parseInt(rows[i].getElementsByTagName("TD")[1].innerHTML); // Season
+                // extract row 2 season
+                var seasonY = parseInt(rows[i + 1].getElementsByTagName("TD")[1].innerHTML); // Season
+                // Check if the two rows should switch place based on season:
+                if (seasonX > seasonY) {
+                    shouldSwitch = true;
+                }
+                // If a switch should occur, mark as such and break the loop:
+                if (shouldSwitch) {
+                    rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
+                    switching = true;
+                    break;
+                }
+            }
+        }
+    }
     await stats(); // Wait for stats() to complete
+    sortTable();
     visualizeData(); // Call visualizeData() after stats() is done
 }
