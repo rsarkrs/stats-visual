@@ -69,16 +69,16 @@ async function pullAndVisualize() {
         //loop through all match pages
         for (let season_var of season_variable) {
             var offset = 0;
-            var elf_records = [];
-            var ud_records = [];
-            var hu_records = [];
-            var orc_records = [];
-            var rd_records = [];
-            var elf_mmr = [];
-            var ud_mmr = [];
-            var hu_mmr = [];
-            var orc_mmr = [];
-            var rd_mmr = [];
+
+            // Define an object to store records and mmr values for each race
+            var raceRecords = {
+                'Random': { records: [], mmr: [] },
+                'Human': { records: [], mmr: [] },
+                'Night Elf': { records: [], mmr: [] },
+                'Orc': { records: [], mmr: [] },
+                'Undead': { records: [], mmr: [] }
+            };
+
             while (offset != -1) {
             var url = 'https://website-backend.w3champions.com/api/matches/search?playerId=' + 
                 battleTag + '&gateway=20&offset=' + offset.toString() + '&pageSize=50&season=' + season_var.toString();
@@ -117,6 +117,7 @@ async function pullAndVisualize() {
                             (player_record[1].toLowerCase() == pname.toLowerCase() && race_record[1] == raceid)
                         ), mmr]
                 };
+
                 // Create game_records variable that holds each solo with assigned race
                 rawdata["matches"].forEach(function(record) {
                     race.forEach(function(race_record) {
@@ -142,22 +143,8 @@ async function pullAndVisualize() {
                         }
                         var dummyVar = meetsCondition(record, raceid, tag)
                         if (dummyVar[0]) {
-                            if (race_record == 'Random'){
-                                rd_records.push(record)
-                                rd_mmr.push(dummyVar[1])
-                            } else if (race_record == 'Human') {
-                                hu_records.push(record)
-                                hu_mmr.push(dummyVar[1])
-                            } else if (race_record == 'Night Elf') {
-                                elf_records.push(record)
-                                elf_mmr.push(dummyVar[1])
-                            } else if (race_record == 'Orc') {
-                                orc_records.push(record)
-                                orc_mmr.push(dummyVar[1])
-                            } else if (race_record == 'Undead') {
-                                ud_records.push(record)
-                                ud_mmr.push(dummyVar[1])
-                            }
+                            raceRecords[race_record].records.push(record);
+                            raceRecords[race_record].mmr.push(dummyVar[1]);
                         }
                     });
                 });
@@ -168,72 +155,25 @@ async function pullAndVisualize() {
                     offset = -1; // Stop the loop on error
                 }
             }
-            var rd_mmr_sum = 0;
-            var rd_mmr_floor = 5000;
-            var rd_mmr_roof = 0;
-            var rd_mmr_avg = 0;
-        
-            var ne_mmr_sum = 0;
-            var ne_mmr_floor = 5000;
-            var ne_mmr_roof = 0;
-            var ne_mmr_avg = 0;
-            var hu_mmr_sum = 0;
-            var hu_mmr_floor = 5000;
-            var hu_mmr_roof = 0;
-            var hu_mmr_avg = 0;
-            var orc_mmr_sum = 0;
-            var orc_mmr_floor = 5000;
-            var orc_mmr_roof = 0;
-            var orc_mmr_avg = 0;
-            var ud_mmr_sum = 0;
-            var ud_mmr_floor = 5000;
-            var ud_mmr_roof = 0;
-            var ud_mmr_avg = 0;
-            
-            //loop through game_records to calculate avg, floor, max, and standard deviation
-            rd_mmr.forEach(function(metrics) {
-                rd_mmr_sum += metrics;
-                rd_mmr_floor = Math.min(metrics, rd_mmr_floor);
-                rd_mmr_roof = Math.max(metrics, rd_mmr_roof);
-            })
-            hu_mmr.forEach(function(metrics) {
-                hu_mmr_sum += metrics;
-                hu_mmr_floor = Math.min(metrics, hu_mmr_floor);
-                hu_mmr_roof = Math.max(metrics, hu_mmr_roof);
-            })
-            elf_mmr.forEach(function(metrics) {
-                ne_mmr_sum += metrics;
-                ne_mmr_floor = Math.min(metrics, ne_mmr_floor);
-                ne_mmr_roof = Math.max(metrics, ne_mmr_roof);
-            })
-            orc_mmr.forEach(function(metrics) {
-                orc_mmr_sum += metrics;
-                orc_mmr_floor = Math.min(metrics, orc_mmr_floor);
-                orc_mmr_roof = Math.max(metrics, orc_mmr_roof);
-            })
-            ud_mmr.forEach(function(metrics) {
-                ud_mmr_sum += metrics;
-                ud_mmr_floor = Math.min(metrics, ud_mmr_floor);
-                ud_mmr_roof = Math.max(metrics, ud_mmr_roof);
-            })
-            rd_mmr_avg = Math.round(rd_mmr_sum / rd_records.length);
-            hu_mmr_avg = Math.round(hu_mmr_sum / hu_records.length);
-            ne_mmr_avg = Math.round(ne_mmr_sum / elf_records.length);
-            orc_mmr_avg = Math.round(orc_mmr_sum / orc_records.length);
-            ud_mmr_avg = Math.round(ud_mmr_sum / ud_records.length);
+
+            var stats = {
+                'Random': { avg: [], floor: [] , roof: []},
+                'Human': { avg: [], floor: [] , roof: []},
+                'Night Elf': { avg: [], floor: [] , roof: []},
+                'Orc': { avg: [], floor: [] , roof: []},
+                'Undead': { avg: [], floor: [] , roof: []}
+            };
+
             race.forEach(function(race_record) {
-                if (race_record == 'Random'){
-                    arrTable = [tag, season_var, race_record, rd_records.length, rd_mmr_avg, rd_mmr_floor, rd_mmr_roof];
-                } else if (race_record == 'Human') {
-                    arrTable = [tag, season_var, race_record, hu_records.length, hu_mmr_avg, hu_mmr_floor, hu_mmr_roof];
-                } else if (race_record == 'Night Elf') {
-                    arrTable = [tag, season_var, race_record, elf_records.length, ne_mmr_avg, ne_mmr_floor, ne_mmr_roof];
-                } else if (race_record == 'Orc') {
-                    arrTable = [tag, season_var, race_record, orc_records.length, orc_mmr_avg, orc_mmr_floor, orc_mmr_roof];
-                } else if (race_record == 'Undead') {
-                    arrTable = [tag, season_var, race_record, ud_records.length, ud_mmr_avg, ud_mmr_floor, ud_mmr_roof];
-                }
-                    //populate table
+                stats[race_record].floor.push(Math.min(...raceRecords[race_record].mmr));
+                stats[race_record].roof.push(Math.max(...raceRecords[race_record].mmr));
+                stats[race_record].avg.push(Math.round(raceRecords[race_record].mmr.reduce((a, b) => a + b, 0) / raceRecords[race_record].mmr.length));
+            })
+
+            race.forEach(function(race_record) {
+                arrTable = [tag, season_var, race_record, raceRecords[race_record].mmr.length, stats[race_record].avg, stats[race_record].floor, stats[race_record].roof];
+                
+                //populate table
                 if (arrTable[3] != 0) {
                     var outputTable = document.getElementById('outputTable').getElementsByTagName('tbody')[0];
                     var newRow = outputTable.insertRow();
