@@ -362,7 +362,7 @@ async function pullAndVisualize() {
                                 display: true,
                                 text: 'Average MMR'
                             },
-                            beginAtZero: true
+                            beginAtZero: false
                         }
                     },
                     plugins: {
@@ -482,7 +482,7 @@ async function pullAndVisualize() {
                                 display: true,
                                 text: 'Min MMR'
                             },
-                            beginAtZero: true
+                            beginAtZero: false
                         }
                     },
                     plugins: {
@@ -602,7 +602,7 @@ async function pullAndVisualize() {
                                 display: true,
                                 text: 'Max MMR'
                             },
-                            beginAtZero: true
+                            beginAtZero: false
                         }
                     },
                     plugins: {
