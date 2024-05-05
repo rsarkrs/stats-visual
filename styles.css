@@ -96,6 +96,10 @@ th {
     display: none;
 }
 
+#intervalTableHtml {
+    display: none;
+}
+
 #loadingSpinner {
     position: fixed;
     top: 50%;

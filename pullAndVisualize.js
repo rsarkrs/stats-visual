@@ -111,6 +111,7 @@ async function pullAndVisualize() {
         //-------------------------Start Hide table and pull data----------------------------------------------------------------------------------
         // hide the table
         document.getElementById('outputTable').style.display = 'none';
+        document.getElementById('intervalTableHtml').style.display = 'none';
         // Show loading spinner before executing the main logic
         document.getElementById('loadingSpinner').style.display = 'block';
         //-------------------------End Hide table and pull data------------------------------------------------------------------------------------
@@ -286,9 +287,6 @@ async function pullAndVisualize() {
             }
         }
 
-        document.getElementById('outputTable').style.display = 'table';
-        // Show loading spinner before executing the main logic
-        document.getElementById('loadingSpinner').style.display = 'none';
         //-------------------------End loop through all match pages---------------------------------------------------------------------------------
         
         
@@ -343,7 +341,7 @@ async function pullAndVisualize() {
                     var mmrStartInterval = minOppoMmr;
 
                     // Iterate over each MMR interval
-                    for (var j = mmrStartInterval; j <= mmrRoof; j += mmrIntervalStep) {
+                    for (var j = mmrStartInterval; j <= maxOppoMmr; j += mmrIntervalStep) {
                         tableIntervalDict[raceDict][raceDict2][j] = {
                             'won': { count: 0, duration: 0, oppoMmr: 0 },
                             'lost': { count: 0, duration: 0, oppoMmr: 0 }
@@ -352,7 +350,7 @@ async function pullAndVisualize() {
                     // calculate values for interval table - opponent, mmr range, games played, win rate, won game duration, lost game duration, opponents mmr avg
                     var mmrInterval = mmrStartInterval;
 
-                    while (mmrInterval <= mmrRoof) {
+                    while (mmrInterval <= maxOppoMmr) {
                         for (var i = 0; i < intervalStatsDict[raceDict][raceDict2].mmr.length; i++) {
                             for (var k = 0; k < intervalStatsDict[raceDict][raceDict2].mmr[i].length; k++) {
                                 if (intervalStatsDict[raceDict][raceDict2].oppoMmr[i][k] >= mmrInterval && intervalStatsDict[raceDict][raceDict2].oppoMmr[i][k] < mmrInterval + mmrIntervalStep) {
@@ -431,15 +429,6 @@ async function pullAndVisualize() {
                     }
                 }
             }
-            // display the table
-            document.getElementById('intervalTableHtml').style.display = 'table';
-            document.getElementById('outputTable').style.display = 'table';
-            // Hide the loading spinner once the processing is complete
-            document.getElementById('loadingSpinner').style.display = 'none';
-
-
-
-
         
     }
 
@@ -447,6 +436,9 @@ async function pullAndVisualize() {
     // document.getElementById('outputTable').style.display = 'none';//'table';
     // Hide the loading spinner once the processing is complete
     document.getElementById('loadingSpinner').style.display = 'none';
+    // display the table
+    document.getElementById('intervalTableHtml').style.display = 'table';
+    document.getElementById('outputTable').style.display = 'table';
 
     function visualizeData() {
 
