@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Player Stats</title>
-    <link rel="stylesheet" href="styles.css?v=1">
+    <link rel="stylesheet" href="styles.css?v=2 defer">
 </head>
 <body>
     <div id="main">
@@ -17,12 +17,12 @@
             <div class="dropdown-row">
                 <label for="seasons">Select a season:</label>
                 <div class="select-wrapper">
-                    <select id="seasons">
+                    <select multiple id="seasons">
                         <!-- Options will be populated dynamically using JavaScript -->
                     </select>
                 </div>
             </div>
-        
+
             <div class="dropdown-row">
                 <label for="race">Select a race:</label>
                 <div class="select-wrapper">
@@ -68,6 +68,24 @@
                     <!-- Table rows will be populated dynamically using JavaScript -->
                 </tbody>
             </table>
+            
+            <table id="intervalTableHtml">
+                <thead>
+                    <tr>
+                        <th>Player Race</th>
+                        <th>Opp. Race</th>
+                        <th>Opp. MMR Range</th>
+                        <th>Games Played</th>
+                        <th>Win Rate</th>
+                        <th>Game Duration - Win</th>
+                        <th>Game Duration - Loss</th>
+                        <th>Avg. Oppo. MMR</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Table rows will be populated dynamically using JavaScript -->
+                </tbody>
+            </table>
         </div>
 
         <div id="canvas">
@@ -75,16 +93,18 @@
             <canvas id="lineGraph"></canvas>
             <canvas id="lineGraph2"></canvas>
             <canvas id="lineGraph3"></canvas>
+            <canvas id="lineGraph4"></canvas>
         </div>
         
     </div>
 
 <!-- Include Papaparse.js library -->
     <script src="PapaParse-5.0.2\papaparse.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="populateDropdown.js?v=1 defer"></script>
-    <script src="pullAndVisualize.js?v=1 defer"></script>
-    <script src="export.js?v=1 defer"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> 
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation"></script>
+    <script src="populateDropdown.js?v=2 defer"></script>
+    <script src="pullAndVisualize.js?v=2"></script>
+    <script src="export.js?v=2 defer"></script>
 
     <script>
         // Run on load
