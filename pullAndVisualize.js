@@ -429,16 +429,17 @@ async function pullAndVisualize() {
                     }
                 }
             }
-        
+        // display the table
+        // document.getElementById('outputTable').style.display = 'none';//'table';
+        // Hide the loading spinner once the processing is complete
+        document.getElementById('loadingSpinner').style.display = 'none';
+        // display the table
+        document.getElementById('intervalTableHtml').style.display = 'table';
+        document.getElementById('outputTable').style.display = 'table';
+
     }
 
-    // display the table
-    // document.getElementById('outputTable').style.display = 'none';//'table';
-    // Hide the loading spinner once the processing is complete
-    document.getElementById('loadingSpinner').style.display = 'none';
-    // display the table
-    document.getElementById('intervalTableHtml').style.display = 'table';
-    document.getElementById('outputTable').style.display = 'table';
+
 
     function visualizeData() {
 
