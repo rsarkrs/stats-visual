@@ -1,6 +1,6 @@
 // Function to convert table data to CSV string
-function convertTableToCSV() {
-    const table = document.getElementById('outputTable');
+function convertTableToCSV(stringExport) {
+    const table = document.getElementById(stringExport);
     const rows = table.querySelectorAll('tr');
     let csv = [];
 
@@ -38,6 +38,15 @@ function downloadCSV(csvData) {
 // Event listener for export button
 const exportBtn = document.getElementById('exportBtn');
 exportBtn.addEventListener('click', () => {
-    const csvData = convertTableToCSV();
+    var exportString = 'outputTable';
+    const csvData = convertTableToCSV(exportString);
+    downloadCSV(csvData);
+});
+
+// Event listener for export button
+const exportBtn2 = document.getElementById('exportBtn2');
+exportBtn2.addEventListener('click', () => {
+    var exportString = 'intervalTableHtml';
+    const csvData = convertTableToCSV(exportString);
     downloadCSV(csvData);
 });

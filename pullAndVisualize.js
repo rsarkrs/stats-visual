@@ -125,7 +125,7 @@ async function pullAndVisualize() {
         for (let loopSeasonTemp in updatedPullDict) {
             var offset = 0;
             for (let loopRace in updatedPullDict[loopSeasonTemp]) {
-                mmrStats[loopRace] = {mmr: [], oppoMmr: [], floor: [], roof: [], avg: []};
+                mmrStats[loopRace] = {mmr: [], oppoMmr: [], floor: [], roof: [], avg: [], sd: [], lcl: [], ucl: []};
             }
             while (offset != -1) {
                 var url = 'https://website-backend.w3champions.com/api/matches/search?playerId=' +
@@ -256,7 +256,17 @@ async function pullAndVisualize() {
                 
                 mmrStats[race_record].floor.push(Math.min(...mmrStats[race_record].mmr));
                 mmrStats[race_record].roof.push(Math.max(...mmrStats[race_record].mmr));
-                mmrStats[race_record].avg.push(Math.round(mmrStats[race_record].mmr.reduce((a, b) => a + b, 0) / mmrStats[race_record].mmr.length));
+                // calculate mean
+                const mean = mmrStats[race_record].mmr.reduce((a, b) => a + b, 0) / mmrStats[race_record].mmr.length;
+                // Calculate squared deviations, sum of squared deviations, and standard deviation
+                const squaredDeviationsSum = mmrStats[race_record].mmr.reduce((sum, value) => sum + Math.pow(value - mean, 2), 0);
+                const meanSquaredDeviations = squaredDeviationsSum / mmrStats[race_record].mmr.length;
+                const standardDeviation = Math.sqrt(meanSquaredDeviations);
+                mmrStats[race_record].avg.push(Math.round(mean));
+                mmrStats[race_record].sd.push(standardDeviation);
+                mmrStats[race_record].lcl.push(parseInt(mmrStats[race_record].avg) - parseInt(mmrStats[race_record].sd));
+                mmrStats[race_record].ucl.push(parseInt(mmrStats[race_record].avg) + parseInt(mmrStats[race_record].sd));
+
                 var arrTable = [
                     tag, //player name
                     loopSeasonTemp, //season
@@ -264,7 +274,9 @@ async function pullAndVisualize() {
                     mmrStats[race_record].mmr.length, //games played
                     mmrStats[race_record].avg, //avg mmr in season
                     mmrStats[race_record].floor, //lowest mmr in season
-                    mmrStats[race_record].roof //highest mmr in season
+                    mmrStats[race_record].roof, //highest mmr in season
+                    mmrStats[race_record].lcl, //lower mmr range
+                    mmrStats[race_record].ucl //upper mmr range
                 ]
                 if (arrTable[3] != 0) {
                     var outputTable = document.getElementById('outputTable').getElementsByTagName('tbody')[0];
@@ -276,6 +288,8 @@ async function pullAndVisualize() {
                     var avgCell = newRow.insertCell(4);
                     var minCell = newRow.insertCell(5);
                     var maxCell = newRow.insertCell(6);
+                    var lclCell = newRow.insertCell(7);
+                    var uclCell = newRow.insertCell(8);
                     nameCell.textContent = arrTable[0];
                     seasonCell.textContent = arrTable[1];
                     raceCell.textContent = arrTable[2];
@@ -283,6 +297,8 @@ async function pullAndVisualize() {
                     avgCell.textContent = arrTable[4];
                     minCell.textContent = arrTable[5];
                     maxCell.textContent = arrTable[6];
+                    lclCell.textContent = arrTable[7];
+                    uclCell.textContent = arrTable[8];
                 }
             }
         }
@@ -460,7 +476,8 @@ async function pullAndVisualize() {
                 var season = parseInt(row.cells[1].textContent); // Parse season as integer
                 var race = row.cells[2].textContent;
                 var avgMMR = parseFloat(row.cells[4].textContent); // Convert to float
-
+                var lcl = parseFloat(row.cells[7].textContent); // Convert to float
+                var ucl = parseFloat(row.cells[8].textContent); // Convert to float
 
                 // Initialize data object for each race if not exists
                 if (!data[race]) {
@@ -474,9 +491,15 @@ async function pullAndVisualize() {
 
                 // Add data to arrays
                 if (!data[race][name][season]) {
-                    data[race][name][season] = [];
+                    data[race][name][season] = {
+                        'avg': [],
+                        'lcl': [],
+                        'ucl': []
+                    };
                 }
-                data[race][name][season].push(avgMMR);
+                data[race][name][season].avg.push(avgMMR);
+                data[race][name][season].lcl.push(lcl);
+                data[race][name][season].ucl.push(ucl);
 
                 // Add season to labels if not already present
                 if (!labels.includes(season)) {
@@ -497,11 +520,12 @@ async function pullAndVisualize() {
 
             // Create datasets for each race and player
             var datasets = [];
+
             for (var race in data) {
                 if (data.hasOwnProperty(race)) {
                     for (var name in data[race]) {
                         if (data[race].hasOwnProperty(name)) {
-                            var dataset = {
+                            var avgTemp = {
                                 label: race + ' - ' + name,
                                 data: [],
                                 borderColor: customColors[race] || 'rgba(75, 192, 192, 1)', // Default color
@@ -509,16 +533,41 @@ async function pullAndVisualize() {
                                 fill: false,
                                 pointStyle: 'circle', // Default marker style
                             };
+
+                            var lclTemp = {
+                                label: 'Lower Bound',
+                                data: [],
+                                borderColor: customColors[race] || 'rgba(75, 192, 192, 1)', // Default color
+                                borderWidth: 2,
+                                fill: false,
+                                borderDash: [5, 5],
+                                pointStyle: 'none', // Default marker style
+                                pointRadius: 0,
+                            };
+
+                            var uclTemp = {
+                                label: 'Upper Bound',
+                                data: [],
+                                borderColor: customColors[race] || 'rgba(75, 192, 192, 1)', // Default color
+                                borderWidth: 2,
+                                fill: false,
+                                borderDash: [5, 5],
+                                pointStyle: 'none', // Default marker style
+                                pointRadius: 0,
+                            };
                             for (var i = 0; i < labels.length; i++) {
                                 var season = labels[i];
                                 if (data[race][name][season]) {
-                                    var avgMMR = data[race][name][season].reduce((a, b) => a + b, 0) / data[race][name][season].length;
-                                    dataset.data.push(avgMMR);
+                                    avgTemp.data.push(...data[race][name][season].avg);
+                                    lclTemp.data.push(...data[race][name][season].lcl);
+                                    uclTemp.data.push(...data[race][name][season].ucl);
                                 } else {
-                                    dataset.data.push(null); // Insert null for missing seasons
+                                    avgTemp.data.push(null);
+                                    lclTemp.data.push(null);
+                                    uclTemp.data.push(null);
                                 }
                             }
-                            datasets.push(dataset);
+                            datasets.push(avgTemp, lclTemp, uclTemp);
                         }
                     }
                 }
