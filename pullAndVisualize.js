@@ -9,7 +9,7 @@ async function pullAndVisualize() {
         //create dictionary of all seasons + races to store data - x
 
         //-------------------------Start assign variables from input fields---------------------------------------------------------------------
-        var tag = document.getElementById('nameList').value; //bnet player tag
+        var tag = document.getElementById('nameInput').value; //bnet player tag
         var battleTag = tag.replace("#", "%23"); //w3c player tag
         var selectElement = document.getElementById('seasons');
         var season_check = []; //w3c season
