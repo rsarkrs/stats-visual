@@ -26,7 +26,7 @@ async function pullAndVisualize() {
             'Night Elf': 4,
             'Undead': 8,
         }; //full race list and w3c race id
-        var last_season = 18; //final w3c season
+        var last_season = 19; //final w3c season
         var first_season = 1; //first w3c season
         var season_variable = []; //array of seasons
         var player_race = []; //array of player races
