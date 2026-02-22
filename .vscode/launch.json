@@ -1,0 +1,28 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Start Local Server (npm)",
+            "type": "node-terminal",
+            "request": "launch",
+            "command": "npm run start",
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "name": "Open App (Chrome @ localhost)",
+            "type": "pwa-chrome",
+            "request": "launch",
+            "url": "http://localhost:8000/index.html",
+            "webRoot": "${workspaceFolder}"
+        }
+    ],
+    "compounds": [
+        {
+            "name": "Run Stats Visual",
+            "configurations": [
+                "Start Local Server (npm)",
+                "Open App (Chrome @ localhost)"
+            ]
+        }
+    ]
+}

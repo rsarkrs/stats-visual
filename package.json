@@ -1,0 +1,14 @@
+{
+  "name": "stats-visual",
+  "version": "1.0.0",
+  "private": true,
+  "description": "W3Champions stats visualization app",
+  "scripts": {
+    "start": "http-server . -p 8000 -c-1",
+    "check": "node --check populateDropdown.js && node --check pullAndVisualize.js && node --check export.js && node --check scripts/refreshPlayerNames.js",
+    "refresh:names": "node scripts/refreshPlayerNames.js"
+  },
+  "devDependencies": {
+    "http-server": "14.1.1"
+  }
+}

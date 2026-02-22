@@ -1,6 +1,11 @@
+function escapeCSVValue(value) {
+    const normalized = String(value ?? '').replace(/\r?\n|\r/g, ' ').trim();
+    return '"' + normalized.replace(/"/g, '""') + '"';
+}
+
 // Function to convert table data to CSV string
-function convertTableToCSV(stringExport) {
-    const table = document.getElementById(stringExport);
+function convertTableToCSV(tableId) {
+    const table = document.getElementById(tableId);
     const rows = table.querySelectorAll('tr');
     let csv = [];
 
@@ -11,7 +16,7 @@ function convertTableToCSV(stringExport) {
 
         // Loop through columns
         cols.forEach(col => {
-            rowData.push(col.innerText.trim());
+            rowData.push(escapeCSVValue(col.innerText));
         });
 
         // Combine columns into a CSV row
@@ -23,30 +28,34 @@ function convertTableToCSV(stringExport) {
 }
 
 // Function to download CSV file
-function downloadCSV(csvData) {
+function downloadCSV(csvData, filename) {
     const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.setAttribute('href', url);
-    link.setAttribute('download', 'table_data.csv');
+    link.setAttribute('download', filename);
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+}
+
+function buildExportFilename(prefix) {
+    const timestamp = new Date().toISOString().replace(/[:]/g, '-').replace(/\..+/, '');
+    return `${prefix}_${timestamp}.csv`;
 }
 
 // Event listener for export button
 const exportBtn = document.getElementById('exportBtn');
 exportBtn.addEventListener('click', () => {
-    var exportString = 'outputTable';
-    const csvData = convertTableToCSV(exportString);
-    downloadCSV(csvData);
+    const csvData = convertTableToCSV('outputTable');
+    downloadCSV(csvData, buildExportFilename('table1_summary'));
 });
 
 // Event listener for export button
 const exportBtn2 = document.getElementById('exportBtn2');
 exportBtn2.addEventListener('click', () => {
-    var exportString = 'intervalTableHtml';
-    const csvData = convertTableToCSV(exportString);
-    downloadCSV(csvData);
+    const csvData = convertTableToCSV('intervalTableHtml');
+    downloadCSV(csvData, buildExportFilename('table2_interval'));
 });

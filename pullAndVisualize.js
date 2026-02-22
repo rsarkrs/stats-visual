@@ -19,28 +19,40 @@ async function pullAndVisualize() {
             }
         }
         var race_check = document.getElementById('race').value; //player race
-        var raceFullList = {
-            'Random': 0,
-            'Human': 1,
-            'Orc': 2,
-            'Night Elf': 4,
-            'Undead': 8,
-        }; //full race list and w3c race id
-        var last_season = 20; //final w3c season
-        var first_season = 1; //first w3c season
+        var raceConfig = window.RACE_CONFIG || {};
+        var raceFullList = raceConfig.raceNameToId || {};
+        var raceIdToName = raceConfig.raceIdToName || {};
         var season_variable = []; //array of seasons
         var player_race = []; //array of player races
         var mmrStats = {};
 
+        async function fetchAvailableSeasonIds() {
+            const seasonResponse = await fetch('https://website-backend.w3champions.com/api/ladder/seasons');
+            if (!seasonResponse.ok) {
+                throw new Error('Unable to fetch season list from W3Champions API');
+            }
+
+            const seasonPayload = await seasonResponse.json();
+            return seasonPayload
+                .map(season => parseInt(season.id, 10))
+                .filter(seasonId => Number.isFinite(seasonId) && seasonId > 0)
+                .sort((a, b) => a - b);
+        }
+
 
         //--------------------------End assign variables from input fields------------------------------------------------------------------------
         //-------------------------Start array of all player races and seasons to iterate through-------------------------------------------------
-        if (season_check == 'All') {
-            for (i = first_season; i <= last_season; i++) {
-                season_variable.push(i);
-            }
+        var allSeasons = await fetchAvailableSeasonIds();
+        if (season_check.includes('All')) {
+            season_variable = allSeasons;
         } else {
-            var season_variable = season_check;
+            season_variable = season_check
+                .map(seasonId => parseInt(seasonId, 10))
+                .filter(seasonId => Number.isFinite(seasonId) && seasonId > 0);
+        }
+
+        if (season_variable.length === 0) {
+            season_variable = allSeasons;
         }
 
         if (race_check == 'All') {
@@ -85,15 +97,19 @@ async function pullAndVisualize() {
                         intTableTemp.deleteRow(j);
                     }
                     break;
-                } else if (seasonDup in dictTemp) {
-                    if (dictTemp[seasonDup].includes(raceDup)) {
-                        delete dictTemp[seasonDup][raceDup];
-                    }
+                } else if (
+                    Object.prototype.hasOwnProperty.call(dictTemp, seasonDup) &&
+                    Object.prototype.hasOwnProperty.call(dictTemp[seasonDup], raceDup)
+                ) {
+                    delete dictTemp[seasonDup][raceDup];
                 }
             }
 
             season_variable.forEach(function (loopSeasonTemp) {
-                if (dictTemp[loopSeasonTemp].length === 0) {
+                if (
+                    Object.prototype.hasOwnProperty.call(dictTemp, loopSeasonTemp) &&
+                    Object.keys(dictTemp[loopSeasonTemp]).length === 0
+                ) {
                     delete dictTemp[loopSeasonTemp];
                 }
             });
@@ -103,6 +119,7 @@ async function pullAndVisualize() {
         //-------------------------End Duplicates Check--------------------------------------------------------------------------------------------
         //-------------------------Start check if summary table exists-----------------------------------------------------------------------------
         var table = document.getElementById('outputTable');
+        var updatedPullDict = playerRaceRecords;
         if (table.rows.length > 0) {
             updatedPullDict = dupTableCheck(table, tag, playerRaceRecords);
         }
@@ -121,7 +138,7 @@ async function pullAndVisualize() {
         //pull records and loop through each one
         //if player name & race is in updatedPullDict[w3c_season][player_race], add record to updatedPullDict[w3c_season][player_race][opponent_race] based on opponent's race
         //iterate through all seasons, calculate intervals last
-        
+        try {
         for (let loopSeasonTemp in updatedPullDict) {
             var offset = 0;
             for (let loopRace in updatedPullDict[loopSeasonTemp]) {
@@ -186,50 +203,18 @@ async function pullAndVisualize() {
                     // Create game_records variable that holds each solo with assigned race
                     rawdata["matches"].forEach(function (record) {
                         for (let race_record in updatedPullDict[loopSeasonTemp]) {
-                            
-                            switch (race_record) {
-                                case 'Random':
-                                    raceid = 0;
-                                    break;
-                                case 'Human':
-                                    raceid = 1;
-                                    break;
-                                case 'Orc':
-                                    raceid = 2;
-                                    break;
-                                case 'Night Elf':
-                                    raceid = 4;
-                                    break;
-                                case 'Undead':
-                                    raceid = 8;
-                                    break;
-                                default:
-                                    raceid = -1;
-                                    break;
-                            }
+                            let raceid = Object.prototype.hasOwnProperty.call(raceFullList, race_record)
+                                ? raceFullList[race_record]
+                                : -1;
                             //check if record contains a game with players race. If so collect data from record
                             var pulledDataCheck = meetsCondition(record, raceid, tag);
                             // if record contains a game with players race, push record data
                             if (pulledDataCheck[0]) {
-                                switch (pulledDataCheck[4]) {
-                                    case 0:
-                                        oppoRaceId = 'Random';
-                                        break;
-                                    case 1:
-                                        oppoRaceId = 'Human';
-                                        break;
-                                    case 2:
-                                        oppoRaceId = 'Orc';
-                                        break;
-                                    case 4:
-                                        oppoRaceId = 'Night Elf';
-                                        break;
-                                    case 8:
-                                        oppoRaceId = 'Undead';
-                                        break;
-                                    default:
-                                        oppoRaceId = -1;
-                                        break;
+                                let oppoRaceId = Object.prototype.hasOwnProperty.call(raceIdToName, pulledDataCheck[4])
+                                    ? raceIdToName[pulledDataCheck[4]]
+                                    : -1;
+                                if (!Object.prototype.hasOwnProperty.call(updatedPullDict[loopSeasonTemp][race_record], oppoRaceId)) {
+                                    return;
                                 }
                                 // records: [], mmr: [], oppoRace: [], oppoMmr: [], playerResult: [], duration: []
                                 updatedPullDict[loopSeasonTemp][race_record][oppoRaceId].records.push(record);
@@ -253,30 +238,44 @@ async function pullAndVisualize() {
 
             for (let race_record in updatedPullDict[loopSeasonTemp]) {
                 // calculate values for summary table
-                
-                mmrStats[race_record].floor.push(Math.min(...mmrStats[race_record].mmr));
-                mmrStats[race_record].roof.push(Math.max(...mmrStats[race_record].mmr));
+                var seasonMmr = mmrStats[race_record].mmr
+                    .map(value => Number(value))
+                    .filter(value => Number.isFinite(value));
+                if (seasonMmr.length === 0) {
+                    continue;
+                }
+
+                mmrStats[race_record].mmr = seasonMmr;
+                var floorValue = Math.min(...seasonMmr);
+                var roofValue = Math.max(...seasonMmr);
                 // calculate mean
-                const mean = mmrStats[race_record].mmr.reduce((a, b) => a + b, 0) / mmrStats[race_record].mmr.length;
+                const mean = seasonMmr.reduce((a, b) => a + b, 0) / seasonMmr.length;
                 // Calculate squared deviations, sum of squared deviations, and standard deviation
-                const squaredDeviationsSum = mmrStats[race_record].mmr.reduce((sum, value) => sum + Math.pow(value - mean, 2), 0);
-                const meanSquaredDeviations = squaredDeviationsSum / mmrStats[race_record].mmr.length;
+                const squaredDeviationsSum = seasonMmr.reduce((sum, value) => sum + Math.pow(value - mean, 2), 0);
+                const meanSquaredDeviations = squaredDeviationsSum / seasonMmr.length;
                 const standardDeviation = Math.sqrt(meanSquaredDeviations);
-                mmrStats[race_record].avg.push(Math.round(mean));
-                mmrStats[race_record].sd.push(standardDeviation);
-                mmrStats[race_record].lcl.push(parseInt(mmrStats[race_record].avg) - parseInt(mmrStats[race_record].sd));
-                mmrStats[race_record].ucl.push(parseInt(mmrStats[race_record].avg) + parseInt(mmrStats[race_record].sd));
+                var avgValue = Math.round(mean);
+                var sdValue = Math.round(standardDeviation);
+                var lclValue = avgValue - sdValue;
+                var uclValue = avgValue + sdValue;
+
+                mmrStats[race_record].floor.push(floorValue);
+                mmrStats[race_record].roof.push(roofValue);
+                mmrStats[race_record].avg.push(avgValue);
+                mmrStats[race_record].sd.push(sdValue);
+                mmrStats[race_record].lcl.push(lclValue);
+                mmrStats[race_record].ucl.push(uclValue);
 
                 var arrTable = [
                     tag, //player name
                     loopSeasonTemp, //season
                     race_record, //race
-                    mmrStats[race_record].mmr.length, //games played
-                    mmrStats[race_record].avg, //avg mmr in season
-                    mmrStats[race_record].floor, //lowest mmr in season
-                    mmrStats[race_record].roof, //highest mmr in season
-                    mmrStats[race_record].lcl, //lower mmr range
-                    mmrStats[race_record].ucl //upper mmr range
+                    seasonMmr.length, //games played
+                    avgValue, //avg mmr in season
+                    floorValue, //lowest mmr in season
+                    roofValue, //highest mmr in season
+                    lclValue, //lower mmr range
+                    uclValue //upper mmr range
                 ]
                 if (arrTable[3] != 0) {
                     var outputTable = document.getElementById('outputTable').getElementsByTagName('tbody')[0];
@@ -301,6 +300,11 @@ async function pullAndVisualize() {
                     uclCell.textContent = arrTable[8];
                 }
             }
+        }
+        } catch (error) {
+            console.error('Error while pulling and calculating stats:', error);
+        } finally {
+            document.getElementById('loadingSpinner').style.display = 'none';
         }
 
         //-------------------------End loop through all match pages---------------------------------------------------------------------------------
@@ -342,17 +346,26 @@ async function pullAndVisualize() {
             for (var raceDict in intervalStatsDict) {
                 for (var raceDict2 in intervalStatsDict[raceDict]) {
                     var mmrIntervalStep = 100;
-                    var minOppoMmr = 3500;
-                    var maxOppoMmr = 0;
-                    for (var i in intervalStatsDict[raceDict][raceDict2].oppoMmr) {
-                        var mmrFloor = Math.floor(Math.min(...intervalStatsDict[raceDict][raceDict2].oppoMmr[i]) / 100) * 100;
-                        var mmrRoof = Math.max(...intervalStatsDict[raceDict][raceDict2].oppoMmr[i]);
+                    var minOppoMmr = Infinity;
+                    var maxOppoMmr = -Infinity;
+                    for (var i = 0; i < intervalStatsDict[raceDict][raceDict2].oppoMmr.length; i++) {
+                        var oppoMmrValues = intervalStatsDict[raceDict][raceDict2].oppoMmr[i]
+                            .map(value => Number(value))
+                            .filter(value => Number.isFinite(value));
+                        if (oppoMmrValues.length === 0) {
+                            continue;
+                        }
+                        var mmrFloor = Math.floor(Math.min(...oppoMmrValues) / mmrIntervalStep) * mmrIntervalStep;
+                        var mmrRoof = Math.max(...oppoMmrValues);
                         if (mmrFloor < minOppoMmr) {
                             minOppoMmr = mmrFloor;
                         }
                         if (mmrRoof > maxOppoMmr) {
                             maxOppoMmr = mmrRoof;
                         }
+                    }
+                    if (!Number.isFinite(minOppoMmr) || !Number.isFinite(maxOppoMmr)) {
+                        continue;
                     }
                     var mmrStartInterval = minOppoMmr;
 
@@ -372,12 +385,12 @@ async function pullAndVisualize() {
                                 if (intervalStatsDict[raceDict][raceDict2].oppoMmr[i][k] >= mmrInterval && intervalStatsDict[raceDict][raceDict2].oppoMmr[i][k] < mmrInterval + mmrIntervalStep) {
                                     if (intervalStatsDict[raceDict][raceDict2].playerResult[i][k]) {
                                         tableIntervalDict[raceDict][raceDict2][mmrInterval]['won'].count += 1;
-                                        tableIntervalDict[raceDict][raceDict2][mmrInterval]['won'].duration += parseInt(intervalStatsDict[raceDict][raceDict2].duration[i][k]);
-                                        tableIntervalDict[raceDict][raceDict2][mmrInterval]['won'].oppoMmr += parseInt(intervalStatsDict[raceDict][raceDict2].oppoMmr[i][k]);
+                                        tableIntervalDict[raceDict][raceDict2][mmrInterval]['won'].duration += parseInt(intervalStatsDict[raceDict][raceDict2].duration[i][k], 10);
+                                        tableIntervalDict[raceDict][raceDict2][mmrInterval]['won'].oppoMmr += parseInt(intervalStatsDict[raceDict][raceDict2].oppoMmr[i][k], 10);
                                     } else {
                                         tableIntervalDict[raceDict][raceDict2][mmrInterval]['lost'].count += 1;
-                                        tableIntervalDict[raceDict][raceDict2][mmrInterval]['lost'].duration += parseInt(intervalStatsDict[raceDict][raceDict2].duration[i][k]);
-                                        tableIntervalDict[raceDict][raceDict2][mmrInterval]['lost'].oppoMmr += parseInt(intervalStatsDict[raceDict][raceDict2].oppoMmr[i][k]);
+                                        tableIntervalDict[raceDict][raceDict2][mmrInterval]['lost'].duration += parseInt(intervalStatsDict[raceDict][raceDict2].duration[i][k], 10);
+                                        tableIntervalDict[raceDict][raceDict2][mmrInterval]['lost'].oppoMmr += parseInt(intervalStatsDict[raceDict][raceDict2].oppoMmr[i][k], 10);
                                     }
                                 }
                             }
@@ -395,6 +408,9 @@ async function pullAndVisualize() {
                     for (var raceLoop in tableIntervalDict[racePlayer]) {
                         if (intervalStatsDict[racePlayer].hasOwnProperty(raceLoop)) {
                             var raceData = tableIntervalDict[racePlayer][raceLoop];
+                            if (!intervalTable[racePlayer][raceLoop]) {
+                                intervalTable[racePlayer][raceLoop] = {};
+                            }
                             for (var intervalLoop in raceData) {
                                 if (raceData.hasOwnProperty(intervalLoop)) {
                                     var intStatsDict = raceData[intervalLoop];
@@ -415,7 +431,6 @@ async function pullAndVisualize() {
                                         }
                                         var avg_oppo_mmr = Math.round((intStatsDict['won'].oppoMmr + intStatsDict['lost'].oppoMmr) / games_played);
 
-                                        intervalTable[racePlayer][raceLoop] = {};
                                         intervalTable[racePlayer][raceLoop][intervalLoop] = [
                                             racePlayer, raceLoop, intervalLoop, games_played, win_rate, win_duration, loss_duration, avg_oppo_mmr
                                         ];
@@ -447,8 +462,6 @@ async function pullAndVisualize() {
             }
         // display the table
         // document.getElementById('outputTable').style.display = 'none';//'table';
-        // Hide the loading spinner once the processing is complete
-        document.getElementById('loadingSpinner').style.display = 'none';
         // display the table
         document.getElementById('intervalTableHtml').style.display = 'table';
         document.getElementById('outputTable').style.display = 'table';
@@ -476,6 +489,8 @@ async function pullAndVisualize() {
                 var season = parseInt(row.cells[1].textContent); // Parse season as integer
                 var race = row.cells[2].textContent;
                 var avgMMR = parseFloat(row.cells[4].textContent); // Convert to float
+                var minMMR = parseFloat(row.cells[5].textContent); // Convert to float
+                var maxMMR = parseFloat(row.cells[6].textContent); // Convert to float
                 var lcl = parseFloat(row.cells[7].textContent); // Convert to float
                 var ucl = parseFloat(row.cells[8].textContent); // Convert to float
 
@@ -492,20 +507,25 @@ async function pullAndVisualize() {
                 // Add data to arrays
                 if (!data[race][name][season]) {
                     data[race][name][season] = {
-                        'avg': [],
-                        'lcl': [],
-                        'ucl': []
+                        'avg': null,
+                        'min': null,
+                        'max': null,
+                        'lcl': null,
+                        'ucl': null
                     };
                 }
-                data[race][name][season].avg.push(avgMMR);
-                data[race][name][season].lcl.push(lcl);
-                data[race][name][season].ucl.push(ucl);
+                data[race][name][season].avg = avgMMR;
+                data[race][name][season].min = minMMR;
+                data[race][name][season].max = maxMMR;
+                data[race][name][season].lcl = lcl;
+                data[race][name][season].ucl = ucl;
 
                 // Add season to labels if not already present
                 if (!labels.includes(season)) {
                     labels.push(season);
                 }
             }
+            labels.sort((a, b) => a - b);
 
             // Define custom colors for each race
             var customColors = {
@@ -520,6 +540,56 @@ async function pullAndVisualize() {
 
             // Create datasets for each race and player
             var datasets = [];
+            var minMarkerColor = 'rgba(0, 102, 204, 1)';
+            var maxMarkerColor = 'rgba(204, 0, 0, 1)';
+            var errorBarPlugin = {
+                id: 'errorBarPlugin',
+                afterDatasetsDraw: function (chart, args, pluginOptions) {
+                    var chartCtx = chart.ctx;
+                    var yScale = chart.scales.y;
+                    var capWidth = (pluginOptions && pluginOptions.capWidth) ? pluginOptions.capWidth : 8;
+
+                    chart.data.datasets.forEach(function (dataset, datasetIndex) {
+                        if (!Array.isArray(dataset.errorLow) || !Array.isArray(dataset.errorHigh)) {
+                            return;
+                        }
+
+                        var meta = chart.getDatasetMeta(datasetIndex);
+                        if (meta.hidden) {
+                            return;
+                        }
+
+                        chartCtx.save();
+                        chartCtx.strokeStyle = dataset.borderColor;
+                        chartCtx.lineWidth = 1.5;
+
+                        meta.data.forEach(function (point, pointIndex) {
+                            var lowValue = dataset.errorLow[pointIndex];
+                            var highValue = dataset.errorHigh[pointIndex];
+                            var avgValue = dataset.data[pointIndex];
+
+                            if (!Number.isFinite(lowValue) || !Number.isFinite(highValue) || !Number.isFinite(avgValue)) {
+                                return;
+                            }
+
+                            var xPixel = point.x;
+                            var lowPixel = yScale.getPixelForValue(lowValue);
+                            var highPixel = yScale.getPixelForValue(highValue);
+
+                            chartCtx.beginPath();
+                            chartCtx.moveTo(xPixel, lowPixel);
+                            chartCtx.lineTo(xPixel, highPixel);
+                            chartCtx.moveTo(xPixel - capWidth / 2, lowPixel);
+                            chartCtx.lineTo(xPixel + capWidth / 2, lowPixel);
+                            chartCtx.moveTo(xPixel - capWidth / 2, highPixel);
+                            chartCtx.lineTo(xPixel + capWidth / 2, highPixel);
+                            chartCtx.stroke();
+                        });
+
+                        chartCtx.restore();
+                    });
+                }
+            };
 
             for (var race in data) {
                 if (data.hasOwnProperty(race)) {
@@ -531,43 +601,50 @@ async function pullAndVisualize() {
                                 borderColor: customColors[race] || 'rgba(75, 192, 192, 1)', // Default color
                                 borderWidth: 2,
                                 fill: false,
-                                pointStyle: 'circle', // Default marker style
+                                pointRadius: 2,
+                                pointHoverRadius: 4,
+                                errorLow: [],
+                                errorHigh: []
                             };
 
-                            var lclTemp = {
-                                label: 'Lower Bound',
+                            var minTemp = {
+                                label: race + ' - ' + name + ' Min',
                                 data: [],
-                                borderColor: customColors[race] || 'rgba(75, 192, 192, 1)', // Default color
-                                borderWidth: 2,
-                                fill: false,
-                                borderDash: [5, 5],
-                                pointStyle: 'none', // Default marker style
-                                pointRadius: 0,
+                                borderColor: minMarkerColor,
+                                backgroundColor: minMarkerColor,
+                                showLine: false,
+                                pointStyle: 'crossRot',
+                                pointRadius: 6,
+                                pointHoverRadius: 6
                             };
 
-                            var uclTemp = {
-                                label: 'Upper Bound',
+                            var maxTemp = {
+                                label: race + ' - ' + name + ' Max',
                                 data: [],
-                                borderColor: customColors[race] || 'rgba(75, 192, 192, 1)', // Default color
-                                borderWidth: 2,
-                                fill: false,
-                                borderDash: [5, 5],
-                                pointStyle: 'none', // Default marker style
-                                pointRadius: 0,
+                                borderColor: maxMarkerColor,
+                                backgroundColor: maxMarkerColor,
+                                showLine: false,
+                                pointStyle: 'crossRot',
+                                pointRadius: 6,
+                                pointHoverRadius: 6
                             };
                             for (var i = 0; i < labels.length; i++) {
                                 var season = labels[i];
                                 if (data[race][name][season]) {
-                                    avgTemp.data.push(...data[race][name][season].avg);
-                                    lclTemp.data.push(...data[race][name][season].lcl);
-                                    uclTemp.data.push(...data[race][name][season].ucl);
+                                    avgTemp.data.push(data[race][name][season].avg);
+                                    avgTemp.errorLow.push(data[race][name][season].lcl);
+                                    avgTemp.errorHigh.push(data[race][name][season].ucl);
+                                    minTemp.data.push(data[race][name][season].min);
+                                    maxTemp.data.push(data[race][name][season].max);
                                 } else {
                                     avgTemp.data.push(null);
-                                    lclTemp.data.push(null);
-                                    uclTemp.data.push(null);
+                                    avgTemp.errorLow.push(null);
+                                    avgTemp.errorHigh.push(null);
+                                    minTemp.data.push(null);
+                                    maxTemp.data.push(null);
                                 }
                             }
-                            datasets.push(avgTemp, lclTemp, uclTemp);
+                            datasets.push(avgTemp, minTemp, maxTemp);
                         }
                     }
                 }
@@ -580,6 +657,7 @@ async function pullAndVisualize() {
                     labels: labels,
                     datasets: datasets
                 },
+                plugins: [errorBarPlugin],
                 options: {
                     scales: {
                         x: {
@@ -597,6 +675,9 @@ async function pullAndVisualize() {
                         }
                     },
                     plugins: {
+                        errorBarPlugin: {
+                            capWidth: 8
+                        },
                         tooltip: {
                             mode: 'index',
                             intersect: false
@@ -604,250 +685,53 @@ async function pullAndVisualize() {
                         legend: {
                             display: true,
                             position: 'bottom',
-                            labels: {
-                                boxWidth: 20
-                            }
-                        }
-                    }
-                }
-            });
-        }
-
-        function visualizeMin() {
-            // Get the canvas element
-            var canvas = document.getElementById('lineGraph2');
-            var ctx = canvas.getContext('2d');
-
-            // Get the table data
-            var table = document.getElementById('outputTable');
-            var data = {};
-            var labels = [];
-
-            // Extract data from the table
-            for (var i = 1; i < table.rows.length; i++) {
-                var row = table.rows[i];
-                var name = row.cells[0].textContent;
-                var season = parseInt(row.cells[1].textContent); // Parse season as integer
-                var race = row.cells[2].textContent;
-                var minMMR = parseFloat(row.cells[5].textContent); // Convert to float
-
-
-                // Initialize data object for each race if not exists
-                if (!data[race]) {
-                    data[race] = {};
-                }
-
-                // Initialize data object for each player under the race if not exists
-                if (!data[race][name]) {
-                    data[race][name] = {};
-                }
-
-                // Add data to arrays
-                if (!data[race][name][season]) {
-                    data[race][name][season] = [];
-                }
-                data[race][name][season].push(minMMR);
-
-                // Add season to labels if not already present
-                if (!labels.includes(season)) {
-                    labels.push(season);
-                }
-            }
-
-            // Define custom colors for each race
-            var customColors = {
-                "Orc": 'rgba(255, 99, 132, 1)', // Red
-                "Night Elf": 'rgba(54, 162, 235, 1)', // Blue
-                "Undead": 'rgba(255, 206, 86, 1)', // Yellow
-                "Random": 'rgba(90, 34, 139, 1)', // Purple
-                "Human": 'rgba(0, 255, 0, 1)', // Green
-                // Add more colors as needed
-            };
-
-
-            // Create datasets for each race and player
-            var datasets = [];
-            for (var race in data) {
-                if (data.hasOwnProperty(race)) {
-                    for (var name in data[race]) {
-                        if (data[race].hasOwnProperty(name)) {
-                            var dataset = {
-                                label: race + ' - ' + name,
-                                data: [],
-                                borderColor: customColors[race] || 'rgba(75, 192, 192, 1)', // Default color
-                                borderWidth: 2,
-                                fill: false,
-                                pointStyle: 'circle', // Default marker style
-                            };
-                            for (var i = 0; i < labels.length; i++) {
-                                var season = labels[i];
-                                if (data[race][name][season]) {
-                                    var minMMR = data[race][name][season].reduce((a, b) => a + b, 0) / data[race][name][season].length;
-                                    dataset.data.push(minMMR);
-                                } else {
-                                    dataset.data.push(null); // Insert null for missing seasons
+                            onClick: function (event, legendItem, legend) {
+                                if (typeof legendItem.datasetIndex !== 'number') {
+                                    return;
                                 }
-                            }
-                            datasets.push(dataset);
-                        }
-                    }
-                }
-            }
-
-            // Create line chart
-            window.lineChart2 = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: labels,
-                    datasets: datasets
-                },
-                options: {
-                    scales: {
-                        x: {
-                            title: {
-                                display: true,
-                                text: 'Season'
-                            }
-                        },
-                        y: {
-                            title: {
-                                display: true,
-                                text: 'Min MMR'
+                                Chart.defaults.plugins.legend.onClick(event, legendItem, legend);
                             },
-                            beginAtZero: false
-                        }
-                    },
-                    plugins: {
-                        tooltip: {
-                            mode: 'index',
-                            intersect: false
-                        },
-                        legend: {
-                            display: true,
-                            position: 'bottom',
                             labels: {
-                                boxWidth: 20
-                            }
-                        }
-                    }
-                }
-            });
-        }
+                                boxWidth: 20,
+                                usePointStyle: true,
+                                filter: function (legendItem) {
+                                    return !legendItem.text.endsWith(' Min') && !legendItem.text.endsWith(' Max');
+                                },
+                                generateLabels: function (chart) {
+                                    var defaultLabels = Chart.defaults.plugins.legend.labels.generateLabels(chart);
+                                    var filteredLabels = defaultLabels.filter(function (legendItem) {
+                                        return !legendItem.text.endsWith(' Min') && !legendItem.text.endsWith(' Max');
+                                    });
 
-        function visualizeMax() {
-            // Get the canvas element
-            var canvas = document.getElementById('lineGraph3');
-            var ctx = canvas.getContext('2d');
+                                    filteredLabels.push({
+                                        text: 'X Min MMR',
+                                        fillStyle: minMarkerColor,
+                                        strokeStyle: minMarkerColor,
+                                        lineWidth: 0,
+                                        hidden: false,
+                                        pointStyle: 'crossRot'
+                                    });
 
-            // Get the table data
-            var table = document.getElementById('outputTable');
-            var data = {};
-            var labels = [];
+                                    filteredLabels.push({
+                                        text: 'X Max MMR',
+                                        fillStyle: maxMarkerColor,
+                                        strokeStyle: maxMarkerColor,
+                                        lineWidth: 0,
+                                        hidden: false,
+                                        pointStyle: 'crossRot'
+                                    });
 
-            // Extract data from the table
-            for (var i = 1; i < table.rows.length; i++) {
-                var row = table.rows[i];
-                var name = row.cells[0].textContent;
-                var season = parseInt(row.cells[1].textContent); // Parse season as integer
-                var race = row.cells[2].textContent;
-                var maxMMR = parseFloat(row.cells[6].textContent); // Convert to float
+                                    filteredLabels.push({
+                                        text: 'LCL/UCL (Lower Confidence Level and Upper Confidence Level)',
+                                        fillStyle: 'rgba(80, 80, 80, 1)',
+                                        strokeStyle: 'rgba(80, 80, 80, 1)',
+                                        lineWidth: 2,
+                                        hidden: false,
+                                        pointStyle: 'line'
+                                    });
 
-
-                // Initialize data object for each race if not exists
-                if (!data[race]) {
-                    data[race] = {};
-                }
-
-                // Initialize data object for each player under the race if not exists
-                if (!data[race][name]) {
-                    data[race][name] = {};
-                }
-
-                // Add data to arrays
-                if (!data[race][name][season]) {
-                    data[race][name][season] = [];
-                }
-                data[race][name][season].push(maxMMR);
-
-                // Add season to labels if not already present
-                if (!labels.includes(season)) {
-                    labels.push(season);
-                }
-            }
-
-            // Define custom colors for each race
-            var customColors = {
-                "Orc": 'rgba(255, 99, 132, 1)', // Red
-                "Night Elf": 'rgba(54, 162, 235, 1)', // Blue
-                "Undead": 'rgba(255, 206, 86, 1)', // Yellow
-                "Random": 'rgba(90, 34, 139, 1)', // Purple
-                "Human": 'rgba(0, 255, 0, 1)', // Green
-                // Add more colors as needed
-            };
-
-
-            // Create datasets for each race and player
-            var datasets = [];
-            for (var race in data) {
-                if (data.hasOwnProperty(race)) {
-                    for (var name in data[race]) {
-                        if (data[race].hasOwnProperty(name)) {
-                            var dataset = {
-                                label: race + ' - ' + name,
-                                data: [],
-                                borderColor: customColors[race] || 'rgba(75, 192, 192, 1)', // Default color
-                                borderWidth: 2,
-                                fill: false,
-                                pointStyle: 'circle', // Default marker style
-                            };
-                            for (var i = 0; i < labels.length; i++) {
-                                var season = labels[i];
-                                if (data[race][name][season]) {
-                                    var maxMMR = data[race][name][season].reduce((a, b) => a + b, 0) / data[race][name][season].length;
-                                    dataset.data.push(maxMMR);
-                                } else {
-                                    dataset.data.push(null); // Insert null for missing seasons
+                                    return filteredLabels;
                                 }
-                            }
-                            datasets.push(dataset);
-                        }
-                    }
-                }
-            }
-
-            // Create line chart
-            window.lineChart3 = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: labels,
-                    datasets: datasets
-                },
-                options: {
-                    scales: {
-                        x: {
-                            title: {
-                                display: true,
-                                text: 'Season'
-                            }
-                        },
-                        y: {
-                            title: {
-                                display: true,
-                                text: 'Max MMR'
-                            },
-                            beginAtZero: false
-                        }
-                    },
-                    plugins: {
-                        tooltip: {
-                            mode: 'index',
-                            intersect: false
-                        },
-                        legend: {
-                            display: true,
-                            position: 'bottom',
-                            labels: {
-                                boxWidth: 20
                             }
                         }
                     }
@@ -864,32 +748,36 @@ async function pullAndVisualize() {
             var table = document.getElementById('intervalTableHtml');
             var data = {};
             var labels = [];
-            var race_labels = [];
             // Extract data from the table
             for (var i = 1; i < table.rows.length; i++) {
                 var row = table.rows[i];
+                var playerRace = row.cells[0].textContent;
                 var oppRace = row.cells[1].textContent;
-                var oppMmrRange = parseInt(row.cells[2].textContent); // Parse season as integer
-                var gamesPlayed = row.cells[3].textContent;
+                var oppMmrRange = parseInt(row.cells[2].textContent, 10);
                 var winRate = parseFloat(row.cells[4].textContent); // Convert to float
 
-
-                // Initialize data object for each race if not exists
-                if (!data[oppRace]) {
-                    data[oppRace] = {};
+                if (!Number.isFinite(oppMmrRange) || !Number.isFinite(winRate)) {
+                    continue;
                 }
 
-                // Initialize data object for each player under the race if not exists
-                if (!data[oppRace][oppMmrRange]) {
-                    data[oppRace][oppMmrRange] = { winRate };
+                var matchupKey = playerRace + ' vs ' + oppRace;
+                // matchup keeps player-race + opp-race + interval context
+                if (!data[matchupKey]) {
+                    data[matchupKey] = {
+                        playerRace: playerRace,
+                        oppRace: oppRace,
+                        intervals: {}
+                    };
                 }
+
+                data[matchupKey].intervals[oppMmrRange] = winRate;
 
                 // Add season to labels if not already present
                 if (!labels.includes(oppMmrRange)) {
                     labels.push(oppMmrRange);
-                    race_labels.push(oppRace);
                 }
             }
+            labels.sort((a, b) => a - b);
 
             // Define custom colors for each race
             var customColors = {
@@ -900,59 +788,43 @@ async function pullAndVisualize() {
                 "Human": 'rgba(0, 255, 0, 1)', // Green
                 // Add more colors as needed
             };
+            var pointStyles = {
+                "Orc": 'triangle',
+                "Night Elf": 'rectRot',
+                "Undead": 'rect',
+                "Random": 'star',
+                "Human": 'circle'
+            };
+            var availablePlayerRaces = new Set();
 
-
-            /*  // Create datasets for each race and player
-              var datasets = [];
-              for (var race in data) {
-                  if (data.hasOwnProperty(race)) {
-                      for (var name in data[race]) {
-                          if (data[race].hasOwnProperty(name)) {
-                              var dataset = {
-                                  label: race,//name,
-                                  data: [],
-                                  borderColor: customColors[race] || 'rgba(75, 192, 192, 1)', // Default color
-                                  borderWidth: 2,
-                                  fill: false,
-                                  pointStyle: 'circle', // Default marker style
-                              };
-                              for (var i = 0; i < Object.keys(data[race]).length; i++) {
-                                  const [keyDictMmr, valDictMmr] = Object.entries(data[race])[i];
-                                  var intRange = keyDictMmr;
-                                  if (data[race][intRange]) {
-                                      var wRate = valDictMmr.winRate;
-                                      dataset.data.push(wRate);
-                                  } else {
-                                      dataset.data.push(null); // Insert null for missing seasons
-                                  }
-                              }
-                              datasets.push(dataset);
-                          }
-                      }
-                  }
-              }*/
-            // Create datasets for each race
+            // Create datasets for each player/opp matchup
             var datasets = [];
-            for (var race in data) {
-                if (data.hasOwnProperty(race)) {
-                    var raceDataset = {
-                        label: race, // Use race as the label
+            for (var matchupKey in data) {
+                if (data.hasOwnProperty(matchupKey)) {
+                    var matchup = data[matchupKey];
+                    availablePlayerRaces.add(matchup.playerRace);
+                    var matchupDataset = {
+                        label: matchupKey,
                         data: [],
-                        borderColor: customColors[race] || 'rgba(75, 192, 192, 1)', // Color based on race
+                        borderColor: customColors[matchup.oppRace] || 'rgba(75, 192, 192, 1)',
+                        backgroundColor: customColors[matchup.oppRace] || 'rgba(75, 192, 192, 1)',
                         borderWidth: 2,
                         fill: false,
-                        pointStyle: 'circle', // Default marker style
+                        pointStyle: pointStyles[matchup.playerRace] || 'circle',
+                        pointRadius: 4,
+                        pointHoverRadius: 5,
+                        oppRace: matchup.oppRace,
+                        playerRace: matchup.playerRace
                     };
                     for (var i = 0; i < labels.length; i++) {
                         var intRange = labels[i];
-                        if (data[race][intRange]) {
-                            var wRate = data[race][intRange].winRate;
-                            raceDataset.data.push(wRate);
+                        if (Object.prototype.hasOwnProperty.call(matchup.intervals, intRange)) {
+                            matchupDataset.data.push(matchup.intervals[intRange]);
                         } else {
-                            raceDataset.data.push(null); // Insert null for missing seasons
+                            matchupDataset.data.push(null);
                         }
                     }
-                    datasets.push(raceDataset);
+                    datasets.push(matchupDataset);
                 }
             }
 
@@ -1011,12 +883,77 @@ async function pullAndVisualize() {
                     }
                 }
             });
+
+            function renderIntervalRaceFilters(chart, playerRaces) {
+                var filtersContainer = document.getElementById('lineGraph4Filters');
+                if (!filtersContainer) {
+                    return;
+                }
+
+                filtersContainer.innerHTML = '';
+
+                var label = document.createElement('span');
+                label.className = 'chart-filter-label';
+                label.textContent = 'Graph 2 Player Race Filter:';
+                filtersContainer.appendChild(label);
+
+                var sortedPlayerRaces = Array.from(playerRaces).sort();
+                var selectedFilter = 'All';
+                var filterButtons = {};
+
+                function updateChartVisibility() {
+                    chart.data.datasets.forEach(function (dataset, datasetIndex) {
+                        var shouldShow = selectedFilter === 'All' || dataset.playerRace === selectedFilter;
+                        chart.setDatasetVisibility(datasetIndex, shouldShow);
+                    });
+                    chart.update();
+                }
+
+                function updateButtonStyles() {
+                    sortedPlayerRaces.forEach(function (race) {
+                        if (!filterButtons[race]) {
+                            return;
+                        }
+                        filterButtons[race].classList.toggle('active', selectedFilter === race);
+                    });
+                    allButton.classList.toggle('active', selectedFilter === 'All');
+                }
+
+                var allButton = document.createElement('button');
+                allButton.type = 'button';
+                allButton.className = 'race-filter-btn active';
+                allButton.textContent = 'All';
+                allButton.addEventListener('click', function () {
+                    selectedFilter = 'All';
+                    updateButtonStyles();
+                    updateChartVisibility();
+                });
+                filtersContainer.appendChild(allButton);
+
+                sortedPlayerRaces.forEach(function (race) {
+                    var raceButton = document.createElement('button');
+                    raceButton.type = 'button';
+                    raceButton.className = 'race-filter-btn active';
+                    raceButton.textContent = race;
+                    raceButton.style.borderColor = customColors[race] || '#b6c1ce';
+                    raceButton.addEventListener('click', function () {
+                        selectedFilter = race;
+                        updateButtonStyles();
+                        updateChartVisibility();
+                    });
+                    filterButtons[race] = raceButton;
+                    filtersContainer.appendChild(raceButton);
+                });
+
+                updateButtonStyles();
+                updateChartVisibility();
+            }
+
+            renderIntervalRaceFilters(window.lineChart4, availablePlayerRaces);
         }
 
         // Call the functions sequentially
         visualizeAvg();
-        visualizeMin();
-        visualizeMax();
         visualizeIntervals();
     }
 
@@ -1024,90 +961,77 @@ async function pullAndVisualize() {
     if (window.lineChart) {
         window.lineChart.destroy();
     }
-    if (window.lineChart2) {
-        window.lineChart2.destroy();
-    }
-    if (window.lineChart3) {
-        window.lineChart3.destroy();
-    }
     if (window.lineChart4) {
         window.lineChart4.destroy();
     }
 
 
-    function sortTableSummary() {
-        var table = document.getElementById('outputTable');
-        var switching = true;
-        /* Make a loop that will continue until no switching has been done: */
-        while (switching) {
-            // Start by saying: no switching is done:
-            switching = false;
-            var rows = table.rows;
-            /* Loop through all table rows (except the first, which contains table headers): */
-            for (i = 1; i < (rows.length - 1); i++) {
-                // Start by assuming there should be no switching:
-                shouldSwitch = false;
-                // extract row 1 season
-                var seasonX = parseInt(rows[i].getElementsByTagName("TD")[1].innerHTML); // Season
-
-                // extract row 2 season
-                var seasonY = parseInt(rows[i + 1].getElementsByTagName("TD")[1].innerHTML); // Season
-
-                // Check if the two rows should switch place based on season:
-                if (seasonX > seasonY) {
-                    shouldSwitch = true;
-                }
-                // If a switch should occur, mark as such and break the loop:
-                if (shouldSwitch) {
-                    rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
-                    switching = true;
-                    break;
-                }
-            }
+    function sortTableBodyRows(tableId, mapRowToModel, compareModels) {
+        var table = document.getElementById(tableId);
+        if (!table || !table.tBodies || table.tBodies.length === 0) {
+            return;
         }
+
+        var tbody = table.tBodies[0];
+        var modeledRows = Array.from(tbody.rows).map(function (row) {
+            return {
+                row: row,
+                model: mapRowToModel(row)
+            };
+        });
+
+        modeledRows.sort(function (a, b) {
+            return compareModels(a.model, b.model);
+        });
+
+        var fragment = document.createDocumentFragment();
+        modeledRows.forEach(function (entry) {
+            fragment.appendChild(entry.row);
+        });
+        tbody.appendChild(fragment);
+    }
+
+    function sortTableSummary() {
+        sortTableBodyRows(
+            'outputTable',
+            function (row) {
+                return {
+                    name: row.cells[0].textContent,
+                    season: parseInt(row.cells[1].textContent, 10),
+                    race: row.cells[2].textContent
+                };
+            },
+            function (left, right) {
+                return (
+                    (left.season - right.season) ||
+                    left.race.localeCompare(right.race) ||
+                    left.name.localeCompare(right.name)
+                );
+            }
+        );
     }
 
     function sortTableInterval() {
-        var table = document.getElementById('intervalTableHtml');
-        var switching = true;
-        /* Make a loop that will continue until no switching has been done: */
-        while (switching) {
-            // Start by saying: no switching is done:
-            switching = false;
-            var rows = table.rows;
-            /* Loop through all table rows (except the first, which contains table headers): */
-            for (i = 1; i < (rows.length - 1); i++) {
-                // Start by assuming there should be no switching:
-                shouldSwitch = false;
-                // extract row 1 Opponent's mmr
-                var oppMmrX = parseInt(rows[i].getElementsByTagName("TD")[2].innerHTML); // Opponent's mmr
-
-                // extract row 2 Opponent's mmr
-                var oppMmrY = parseInt(rows[i + 1].getElementsByTagName("TD")[2].innerHTML); // Opponent's mmr
-
-                // Check if the two rows should switch place based on season:
-                if (oppMmrX > oppMmrY) {
-                    shouldSwitch = true;
-                }
-                // If a switch should occur, mark as such and break the loop:
-                if (shouldSwitch) {
-                    rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
-                    switching = true;
-                    break;
-                }
+        sortTableBodyRows(
+            'intervalTableHtml',
+            function (row) {
+                return {
+                    playerRace: row.cells[0].textContent,
+                    oppRace: row.cells[1].textContent,
+                    oppMmr: parseInt(row.cells[2].textContent, 10)
+                };
+            },
+            function (left, right) {
+                return (
+                    left.playerRace.localeCompare(right.playerRace) ||
+                    left.oppRace.localeCompare(right.oppRace) ||
+                    (left.oppMmr - right.oppMmr)
+                );
             }
-        }
+        );
     }
     await stats(); // Wait for stats() to complete
     sortTableSummary();
     sortTableInterval();
     visualizeData(); // Call visualizeData() after stats() is done
-
-
-
-
-    //document.getElementById('lineGraph').style.display = 'none';
-    //document.getElementById('lineGraph2').style.display = 'none';
-    //document.getElementById('lineGraph3').style.display = 'none';
-    //document.getElementById('lineGraph4').style.display = 'none';
 }

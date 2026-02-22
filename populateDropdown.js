@@ -1,67 +1,84 @@
 // Function to populate the dropdown list
 function populateName() {
-    var nameInput = document.getElementById('nameInput');
     var nameSuggestions = document.getElementById('nameSuggestions');
     var ddSeasons = document.getElementById('seasons');
     var ddRace = document.getElementById('race');
+    var protocol = window.location.protocol;
+    var raceOptions = (window.RACE_CONFIG && window.RACE_CONFIG.raceOptions) || [];
 
-    // Fetch the CSV file containing the names
-    fetch('gnl.csv')
-        .then(response => response.text())
-        .then(csvText => {
-            // Parse the CSV text using Papaparse.js
-            var csvData = Papa.parse(csvText, { header: false, skipEmptyLines: true });
-            var names = csvData.data;
+    if (protocol === 'file:') {
+        console.error(
+            'This app must be run from an HTTP server. Opening index.html directly via file:// blocks fetch() in most browsers.'
+        );
+        return;
+    }
 
-            // Skip the first row (header row)
-            names.shift();
+    // Fetch the generated player names file.
+    fetch('./playerNames.json')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Failed to fetch playerNames.json');
+            }
+            return response.json();
+        })
+        .then(payload => {
+            var names = Array.isArray(payload) ? payload : payload.battleTags;
+            if (!Array.isArray(names)) {
+                throw new Error('Invalid player names payload');
+            }
 
-            // Populate the datalist with the names
+            var fragment = document.createDocumentFragment();
             names.forEach(name => {
+                if (!name) {
+                    return;
+                }
+
                 var option = document.createElement('option');
-                option.value = name[0];
-                nameSuggestions.appendChild(option);
+                option.value = name;
+                fragment.appendChild(option);
             });
+
+            nameSuggestions.appendChild(fragment);
         })
         .catch(error => {
             console.error('Error fetching names:', error);
         });
 
-    fetch('seasons.csv')
-        .then(response => response.text())
-        .then(csvText => {
-            // Parse the CSV text using Papaparse.js
-            var csvData = Papa.parse(csvText, {header: false, skipEmptyLines: true});
-            var names = csvData.data;
-            // Skip the first row (header row)
-            names.shift();
-            // Populate the dropdown list with the names
-            names.forEach(name => {
+    // Seasons are now sourced directly from the W3Champions API.
+    fetch('https://website-backend.w3champions.com/api/ladder/seasons')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Failed to fetch seasons');
+            }
+            return response.json();
+        })
+        .then(seasons => {
+            var seasonIds = seasons
+                .map(season => parseInt(season.id, 10))
+                .filter(seasonId => Number.isFinite(seasonId) && seasonId > 0)
+                .sort((a, b) => a - b);
+
+            var allOption = document.createElement('option');
+            allOption.text = 'All';
+            allOption.value = 'All';
+            ddSeasons.add(allOption);
+
+            seasonIds.forEach(seasonId => {
                 var option = document.createElement('option');
-                option.text = name[0];                     
+                option.text = seasonId.toString();
+                option.value = seasonId.toString();
                 ddSeasons.add(option);
             });
         })
+        .catch(error => {
+            console.error('Error fetching seasons:', error);
+        });
 
-    fetch('races.csv')
-        .then(response => response.text())
-        .then(csvText => {
-            // Parse the CSV text using Papaparse.js
-            var csvData = Papa.parse(csvText, {header: false, skipEmptyLines: true});
-            var names = csvData.data;
-
-            // Skip the first row (header row)
-            names.shift();
-
-            // Populate the dropdown list with the names
-            names.forEach(name => {
-                var option = document.createElement('option');
-                option.text = name[0]; 
-                ddRace.add(option);
-            });
-        })
-    .catch(error => {
-        console.error('Error fetching names:', error);
+    raceOptions.forEach(function (raceName) {
+        var option = document.createElement('option');
+        option.text = raceName;
+        option.value = raceName;
+        ddRace.add(option);
     });
 
 }

@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Player Stats</title>
-    <link rel="stylesheet" href="styles.css?v=2 defer">
+    <link rel="stylesheet" href="styles.css?v=4">
 </head>
 <body>
     <div id="main">
@@ -49,66 +49,66 @@
             <button id="exportBtn2">Export Table 2 to CSV</button>
         </div>
 
-        <div id="table">
-            <div id="loadingSpinner" class="spinner">
-                <!-- Your loading spinner HTML/CSS code here -->
+        <div id="resultsLayout">
+            <div id="table">
+                <div id="loadingSpinner" class="spinner">
+                    <!-- Your loading spinner HTML/CSS code here -->
+                </div>
+
+                <table id="outputTable">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Season</th>
+                            <th>Race</th>
+                            <th>Game Count</th>
+                            <th>Average MMR</th>
+                            <th>Min MMR</th>
+                            <th>Max MMR</th>
+                            <th>LBound MMR</th>
+                            <th>UBound MMR</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Table rows will be populated dynamically using JavaScript -->
+                    </tbody>
+                </table>
+                
+                <table id="intervalTableHtml">
+                    <thead>
+                        <tr>
+                            <th>Player Race</th>
+                            <th>Opp. Race</th>
+                            <th>Opp. MMR Range</th>
+                            <th>Games Played</th>
+                            <th>Win Rate</th>
+                            <th>Game Duration - Win</th>
+                            <th>Game Duration - Loss</th>
+                            <th>Avg. Oppo. MMR</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Table rows will be populated dynamically using JavaScript -->
+                    </tbody>
+                </table>
             </div>
 
-            <table id="outputTable">
-                <thead>
-                    <tr>
-                        <th>Name</th>
-                        <th>Season</th>
-                        <th>Race</th>
-                        <th>Game Count</th>
-                        <th>Average MMR</th>
-                        <th>Min MMR</th>
-                        <th>Max MMR</th>
-                        <th>LBound MMR</th>
-                        <th>UBound MMR</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <!-- Table rows will be populated dynamically using JavaScript -->
-                </tbody>
-            </table>
-            
-            <table id="intervalTableHtml">
-                <thead>
-                    <tr>
-                        <th>Player Race</th>
-                        <th>Opp. Race</th>
-                        <th>Opp. MMR Range</th>
-                        <th>Games Played</th>
-                        <th>Win Rate</th>
-                        <th>Game Duration - Win</th>
-                        <th>Game Duration - Loss</th>
-                        <th>Avg. Oppo. MMR</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <!-- Table rows will be populated dynamically using JavaScript -->
-                </tbody>
-            </table>
-        </div>
-
-        <div id="canvas">
-            <!-- Canvas element to render the line graph -->
-            <canvas id="lineGraph"></canvas>
-            <canvas id="lineGraph2"></canvas>
-            <canvas id="lineGraph3"></canvas>
-            <canvas id="lineGraph4"></canvas>
+            <div id="canvas">
+                <!-- Canvas element to render the line graph -->
+                <canvas id="lineGraph"></canvas>
+                <div id="lineGraph4Filters" class="chart-filters"></div>
+                <canvas id="lineGraph4"></canvas>
+            </div>
         </div>
         
     </div>
 
-<!-- Include Papaparse.js library -->
-    <script src="PapaParse-5.0.2\papaparse.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> 
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation"></script>
-    <script src="populateDropdown.js?v=2 defer"></script>
-    <script src="pullAndVisualize.js?v=2"></script>
-    <script src="export.js?v=2 defer"></script>
+    <script src="raceConfig.js?v=1" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js" defer></script> 
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.1.0/dist/chartjs-plugin-annotation.min.js" defer></script>
+    <script src="populateDropdown.js?v=5" defer></script>
+    <script src="pullAndVisualize.js?v=6" defer></script>
+    <script src="export.js?v=4" defer></script>
 
     <script>
         // Run on load
