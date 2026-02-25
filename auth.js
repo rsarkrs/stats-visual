@@ -1,4 +1,5 @@
 let currentAuthUser = null;
+const isLocalRuntime = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 
 function setPullEnabled(isEnabled) {
     var pullButton = document.getElementById('pullBtn');
@@ -44,6 +45,13 @@ function renderAuthState(authState) {
 }
 
 async function fetchAuthState() {
+    if (!isLocalRuntime) {
+        return {
+            authenticated: false,
+            authConfigured: false
+        };
+    }
+
     const response = await fetch('/auth/me', {
         credentials: 'same-origin'
     });
@@ -69,6 +77,11 @@ function getCurrentBattleTag() {
 }
 
 async function logout() {
+    if (!isLocalRuntime) {
+        renderAuthState({ authenticated: false, authConfigured: false });
+        return;
+    }
+
     try {
         const response = await fetch('/auth/logout', {
             method: 'POST',
@@ -90,6 +103,10 @@ function initializeAuthUi() {
 
     if (loginBtn) {
         loginBtn.addEventListener('click', function () {
+            if (!isLocalRuntime) {
+                setAuthMessage('Blizzard sign-in is only available when running the local backend.', true);
+                return;
+            }
             window.location.href = '/auth/login';
         });
     }

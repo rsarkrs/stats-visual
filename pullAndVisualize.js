@@ -19,13 +19,35 @@ async function pullAndVisualize() {
         }
 
         var tag = authTag || manualTag; // player tag (auth-first fallback to manual input)
-        var useAuthProxy = Boolean(authTag);
+        var isLocalRuntime = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        var canUseBackendProxy = isLocalRuntime;
+        var useAuthProxy = Boolean(authTag) && canUseBackendProxy;
         if (!tag) {
             if (typeof setAuthMessage === 'function') {
                 setAuthMessage('Enter a player battle tag or sign in with Blizzard before pulling match data.', true);
             }
             console.error('Missing player battle tag.');
             return false;
+        }
+
+        function buildMatchSearchUrl(playerId, seasonId, offsetValue, pageSizeValue, useAuthRoute) {
+            if (canUseBackendProxy) {
+                if (useAuthRoute) {
+                    return '/api/my-stats?gateway=20&offset=' + offsetValue.toString() + '&pageSize=' + pageSizeValue.toString() + '&season=' + seasonId.toString();
+                }
+                return '/api/w3c/matches/search?playerId=' +
+                    encodeURIComponent(playerId) + '&gateway=20&offset=' + offsetValue.toString() + '&pageSize=' + pageSizeValue.toString() + '&season=' + seasonId.toString();
+            }
+
+            return 'https://website-backend.w3champions.com/api/matches/search?playerId=' +
+                encodeURIComponent(playerId) + '&gateway=20&offset=' + offsetValue.toString() + '&pageSize=' + pageSizeValue.toString() + '&season=' + seasonId.toString();
+        }
+
+        function buildFetchOptions() {
+            if (canUseBackendProxy) {
+                return { credentials: 'same-origin' };
+            }
+            return {};
         }
 
         var selectElement = document.getElementById('seasons');
@@ -162,23 +184,18 @@ async function pullAndVisualize() {
                 mmrStats[loopRace] = {mmr: [], oppoMmr: [], floor: [], roof: [], avg: [], sd: [], lcl: [], ucl: []};
             }
             while (offset != -1) {
-                var url;
-                if (useAuthProxy) {
-                    url = '/api/my-stats?gateway=20&offset=' + offset.toString() + '&pageSize=50&season=' + loopSeasonTemp.toString();
-                } else {
-                    url = '/api/w3c/matches/search?playerId=' +
-                        encodeURIComponent(tag) + '&gateway=20&offset=' + offset.toString() + '&pageSize=50&season=' + loopSeasonTemp.toString();
-                }
+                var url = buildMatchSearchUrl(tag, loopSeasonTemp, offset, 50, useAuthProxy);
                 try {
-                    const response = await fetch(url, { credentials: 'same-origin' });
+                    const response = await fetch(url, buildFetchOptions());
                     if (!response.ok) {
-                        if (response.status === 401) {
+                        if (canUseBackendProxy && response.status === 401) {
                             throw new Error('Session expired. Please sign in again.');
                         }
                         throw new Error('Network response was not ok');
                     }
                     const rawdata = await response.json();
-                    if (rawdata["matches"].length < 50) {
+                    var pulledMatches = Array.isArray(rawdata["matches"]) ? rawdata["matches"] : [];
+                    if (pulledMatches.length < 50) {
                         offset = -1;
                     } else {
                         offset += 50;
@@ -226,7 +243,7 @@ async function pullAndVisualize() {
                     };
 
                     // Create game_records variable that holds each solo with assigned race
-                    rawdata["matches"].forEach(function (record) {
+                    pulledMatches.forEach(function (record) {
                         for (let race_record in updatedPullDict[loopSeasonTemp]) {
                             let raceid = Object.prototype.hasOwnProperty.call(raceFullList, race_record)
                                 ? raceFullList[race_record]
