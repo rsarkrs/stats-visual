@@ -4,11 +4,17 @@
   "private": true,
   "description": "W3Champions stats visualization app",
   "scripts": {
-    "start": "http-server . -p 8000 -c-1",
-    "check": "node --check populateDropdown.js && node --check pullAndVisualize.js && node --check export.js && node --check scripts/refreshPlayerNames.js",
-    "refresh:names": "node scripts/refreshPlayerNames.js"
+    "start": "node server.js",
+    "check": "node --check auth.js && node --check cacheDb.js && node --check populateDropdown.js && node --check pullAndVisualize.js && node --check export.js && node --check raceConfig.js && node --check server.js && node --check scripts/refreshPlayerNames.js && node --check scripts/pullTopLadderPlayersMatches.js",
+    "refresh:names": "node scripts/refreshPlayerNames.js",
+    "pull:matches:top5x5": "node scripts/pullTopLadderPlayersMatches.js"
   },
-  "devDependencies": {
-    "http-server": "14.1.1"
+  "dependencies": {
+    "dotenv": "16.6.1",
+    "express": "4.21.2",
+    "express-rate-limit": "7.5.1",
+    "express-session": "1.18.2",
+    "sqlite": "5.1.1",
+    "sqlite3": "^5.1.7"
   }
 }

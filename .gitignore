@@ -1,1 +1,7 @@
 temp_*
+node_modules/
+.env
+.env.local
+npm-debug.log*
+.vscode/launch.json
+data/

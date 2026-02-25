@@ -11,15 +11,15 @@ npm run refresh:names
 
 1. Select one or more seasons.
 2. Select a race.
-3. Select a player name.
+3. Select a player name (battle tag) from the list.
 4. Click `Pull Match Data`.
 
 Multi-select seasons with `Shift + Left Click` or `Alt + Left Click`.
 
 ## Local Run (Required)
-Do not open `index.html` with `file://`. The app uses `fetch()` and must run from an HTTP server.
+Do not open `index.html` with `file://`. The app uses `fetch()` and must run from the Node backend HTTP server.
 
-Preferred (deterministic runtime with pinned dev tooling):
+Preferred:
 
 ```powershell
 npm install
@@ -30,29 +30,28 @@ Then open:
 
 `http://localhost:8000/index.html`
 
-Fallback without npm tooling:
-
-```powershell
-python -m http.server 8000
-```
-
-If `python` is not available:
-
-```powershell
-py -m http.server 8000
-```
-
-Then open:
-
-`http://localhost:8000/index.html`
-
 Stop the server with `Ctrl + C`.
 
 ## Known Limitations
-- `playerNames.json` is refreshed manually (not scheduled/automatic).
+1. `playerNames.json` is refreshed manually (not scheduled/automatic).
+
+## Optional OAuth Work (Preserved)
+OAuth/backend implementation files are kept for future use:
+1. `server.js`
+2. `auth.js`
+3. `.env.example`
+4. `BLIZZARD_AUTH_IMPLEMENTATION_PLAN.md`
+
+Current runtime path uses `playerNames.json` for battletag selection and `server.js` as a proxy/cache for W3C matches.
+
+## SQLite Cache
+1. Match search responses are stored in SQLite at `data/w3c-cache.sqlite`.
+2. Full `/api/matches/search` payload JSON is stored per request/page.
+3. Full raw match JSON objects are stored per match id.
+4. Cache stats endpoint: `GET /api/cache/stats`
 
 ## Notes
-- Chart.js and chartjs-plugin-annotation are pinned to explicit CDN versions in `index.html` for stable behavior.
+1. Chart.js and chartjs-plugin-annotation are pinned to explicit CDN versions in `index.html` for stable behavior.
 
 ## Quality Checks
 Run syntax checks:
@@ -67,8 +66,8 @@ Refresh local player names cache:
 npm run refresh:names
 ```
 
-Manual regression checklist:
-- Pull single-season and multi-season data; verify both tables populate.
-- Verify graph 1 renders avg line, X min/max markers, and LCL/UCL bars.
-- Verify graph 2 player-race filter starts on `All` and each race button isolates one race.
-- Export both tables and confirm filenames are unique and CSV values stay quoted in spreadsheet apps.
+Seed SQLite match cache from ladder pages (latest 5 seasons, pages 1-5):
+
+```powershell
+npm run pull:matches:top5x5
+```

@@ -9,8 +9,25 @@ async function pullAndVisualize() {
         //create dictionary of all seasons + races to store data - x
 
         //-------------------------Start assign variables from input fields---------------------------------------------------------------------
-        var tag = document.getElementById('nameInput').value; //bnet player tag
-        var battleTag = tag.replace("#", "%23"); //w3c player tag
+        var authTag = typeof window.getCurrentBattleTag === 'function'
+            ? window.getCurrentBattleTag()
+            : '';
+        var manualTag = '';
+        var manualTagElement = document.getElementById('nameInput');
+        if (manualTagElement && typeof manualTagElement.value === 'string') {
+            manualTag = manualTagElement.value.trim();
+        }
+
+        var tag = authTag || manualTag; // player tag (auth-first fallback to manual input)
+        var useAuthProxy = Boolean(authTag);
+        if (!tag) {
+            if (typeof setAuthMessage === 'function') {
+                setAuthMessage('Enter a player battle tag or sign in with Blizzard before pulling match data.', true);
+            }
+            console.error('Missing player battle tag.');
+            return false;
+        }
+
         var selectElement = document.getElementById('seasons');
         var season_check = []; //w3c season
         for (var i = 0; i < selectElement.options.length; i++) {
@@ -145,11 +162,19 @@ async function pullAndVisualize() {
                 mmrStats[loopRace] = {mmr: [], oppoMmr: [], floor: [], roof: [], avg: [], sd: [], lcl: [], ucl: []};
             }
             while (offset != -1) {
-                var url = 'https://website-backend.w3champions.com/api/matches/search?playerId=' +
-                    battleTag + '&gateway=20&offset=' + offset.toString() + '&pageSize=50&season=' + loopSeasonTemp.toString();
+                var url;
+                if (useAuthProxy) {
+                    url = '/api/my-stats?gateway=20&offset=' + offset.toString() + '&pageSize=50&season=' + loopSeasonTemp.toString();
+                } else {
+                    url = '/api/w3c/matches/search?playerId=' +
+                        encodeURIComponent(tag) + '&gateway=20&offset=' + offset.toString() + '&pageSize=50&season=' + loopSeasonTemp.toString();
+                }
                 try {
-                    const response = await fetch(url);
+                    const response = await fetch(url, { credentials: 'same-origin' });
                     if (!response.ok) {
+                        if (response.status === 401) {
+                            throw new Error('Session expired. Please sign in again.');
+                        }
                         throw new Error('Network response was not ok');
                     }
                     const rawdata = await response.json();
@@ -465,6 +490,7 @@ async function pullAndVisualize() {
         // display the table
         document.getElementById('intervalTableHtml').style.display = 'table';
         document.getElementById('outputTable').style.display = 'table';
+        return true;
 
     }
 
@@ -1030,7 +1056,10 @@ async function pullAndVisualize() {
             }
         );
     }
-    await stats(); // Wait for stats() to complete
+    var hasData = await stats(); // Wait for stats() to complete
+    if (!hasData) {
+        return;
+    }
     sortTableSummary();
     sortTableInterval();
     visualizeData(); // Call visualizeData() after stats() is done

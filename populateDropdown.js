@@ -1,4 +1,3 @@
-// Function to populate the dropdown list
 function populateName() {
     var nameSuggestions = document.getElementById('nameSuggestions');
     var ddSeasons = document.getElementById('seasons');
@@ -13,22 +12,22 @@ function populateName() {
         return;
     }
 
-    // Fetch the generated player names file.
+    // Populate player names from local cache file.
     fetch('./playerNames.json')
-        .then(response => {
+        .then(function (response) {
             if (!response.ok) {
                 throw new Error('Failed to fetch playerNames.json');
             }
             return response.json();
         })
-        .then(payload => {
+        .then(function (payload) {
             var names = Array.isArray(payload) ? payload : payload.battleTags;
             if (!Array.isArray(names)) {
                 throw new Error('Invalid player names payload');
             }
 
             var fragment = document.createDocumentFragment();
-            names.forEach(name => {
+            names.forEach(function (name) {
                 if (!name) {
                     return;
                 }
@@ -37,40 +36,38 @@ function populateName() {
                 option.value = name;
                 fragment.appendChild(option);
             });
-
             nameSuggestions.appendChild(fragment);
         })
-        .catch(error => {
+        .catch(function (error) {
             console.error('Error fetching names:', error);
         });
 
-    // Seasons are now sourced directly from the W3Champions API.
     fetch('https://website-backend.w3champions.com/api/ladder/seasons')
-        .then(response => {
+        .then(function (response) {
             if (!response.ok) {
                 throw new Error('Failed to fetch seasons');
             }
             return response.json();
         })
-        .then(seasons => {
+        .then(function (seasons) {
             var seasonIds = seasons
-                .map(season => parseInt(season.id, 10))
-                .filter(seasonId => Number.isFinite(seasonId) && seasonId > 0)
-                .sort((a, b) => a - b);
+                .map(function (season) { return parseInt(season.id, 10); })
+                .filter(function (seasonId) { return Number.isFinite(seasonId) && seasonId > 0; })
+                .sort(function (a, b) { return a - b; });
 
             var allOption = document.createElement('option');
             allOption.text = 'All';
             allOption.value = 'All';
             ddSeasons.add(allOption);
 
-            seasonIds.forEach(seasonId => {
+            seasonIds.forEach(function (seasonId) {
                 var option = document.createElement('option');
                 option.text = seasonId.toString();
                 option.value = seasonId.toString();
                 ddSeasons.add(option);
             });
         })
-        .catch(error => {
+        .catch(function (error) {
             console.error('Error fetching seasons:', error);
         });
 
@@ -80,5 +77,4 @@ function populateName() {
         option.value = raceName;
         ddRace.add(option);
     });
-
 }

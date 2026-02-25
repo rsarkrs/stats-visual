@@ -1,0 +1,11 @@
+{
+    "sqltools.connections": [
+        {
+            "previewLimit": 50,
+            "driver": "SQLite",
+            "name": "SQLite",
+            "group": "SQLite",
+            "database": "${workspaceFolder:stats-visual}/data/w3c-cache.sqlite"
+        }
+    ]
+}

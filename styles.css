@@ -50,6 +50,35 @@ th {
 
 #header {
     background-color: #f2f2f2;
+    margin-bottom: 8px;
+}
+
+#authPanel {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+#authStatus {
+    font-weight: 600;
+    color: #1f2937;
+}
+
+.auth-message {
+    margin-top: 6px;
+    padding: 8px 10px;
+    background-color: #eef2ff;
+    border: 1px solid #c7d2fe;
+    border-radius: 4px;
+    color: #1e3a8a;
+    font-size: 14px;
+}
+
+.auth-message.error {
+    background-color: #fee2e2;
+    border-color: #fecaca;
+    color: #991b1b;
 }
 
 #buttons {
